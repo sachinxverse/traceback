@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="hero text-center py-5">
+  <h1 class="display-5 fw-bold">Lost. Found. Reconnected.</h1>
+  <p class="lead text-muted">TRACEBACK connects people who lost belongings with the people who found them —
+  with AI matching and human verification before any handover.</p>
+  <div class="d-flex justify-content-center gap-3 mt-4">
+    <a href="/report/lost" class="btn btn-amber btn-lg px-4"><i class="bi bi-search-heart"></i> I lost something</a>
+    <a href="/report/found" class="btn btn-primary btn-lg px-4"><i class="bi bi-hand-thumbs-up"></i> I found something</a>
+  </div>
+</div>
+
+<div class="row g-3 mt-2">
+  <div class="col-md-4"><div class="card p-3 text-center">
+    <div class="fs-3 fw-bold" style="color:var(--teal)">{{ stats.recovered }}</div>
+    <div class="text-muted">Items recovered</div></div></div>
+  <div class="col-md-4"><div class="card p-3 text-center">
+    <div class="fs-3 fw-bold" style="color:var(--blue)">{{ stats.institutions }}</div>
+    <div class="text-muted">Active institutions</div></div></div>
+  <div class="col-md-4"><div class="card p-3 text-center">
+    <div class="fs-3 fw-bold" style="color:var(--navy)">{{ stats.reports }}</div>
+    <div class="text-muted">Reports filed</div></div></div>
+</div>
+
+<div class="row g-4 mt-3">
+  <div class="col-md-4"><div class="card h-100 p-4"><h5><span class="badge badge-lost">1</span> Report it</h5>
+    <p class="text-muted mb-0">Submit a Lost or Found report with photos, description, date and location.</p></div></div>
+  <div class="col-md-4"><div class="card h-100 p-4"><h5><span class="badge badge-found">2</span> Get matched</h5>
+    <p class="text-muted mb-0">Our engine compares photos, wording, place and time to suggest possible matches.</p></div></div>
+  <div class="col-md-4"><div class="card h-100 p-4"><h5><span class="badge badge-recovered">3</span> Verify &amp; recover</h5>
+    <p class="text-muted mb-0">The owner submits a claim with private details; a human reviewer approves before handover.</p></div></div>
+</div>
+
+<h3 class="mt-5">Participating institutions</h3>
+<div class="row g-3">
+  {% for i in institutions %}
+  <div class="col-md-3"><div class="card p-3"><strong>{{ i.name }}</strong>
+    <div class="text-muted small">{{ i.institution_type.value if i.institution_type else '' }}</div></div></div>
+  {% else %}
+  <p class="text-muted">No institutions listed yet.</p>
+  {% endfor %}
+</div>
+
+<p class="text-muted small mt-5">Privacy note: your contact details and private identifying details are never shown to other users.
+Matches are recommendations, not proof of ownership.</p>
+{% endblock %}

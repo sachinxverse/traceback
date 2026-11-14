@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Browse found items</h1>
+<form class="row g-2 mb-4">
+  <div class="col-md-5"><input class="form-control" name="q" value="{{ q }}" placeholder="Keyword…"></div>
+  <div class="col-md-4"><select class="form-select" name="category">
+    <option value="">All categories</option>
+    {% for c in categories %}<option value="{{ c }}" {{ 'selected' if c == category }}>{{ c.replace('_',' ').title() }}</option>{% endfor %}
+  </select></div>
+  <div class="col-md-3"><button class="btn btn-primary w-100">Filter</button></div>
+</form>
+<div class="row g-3">
+{% for r in reports %}
+  <div class="col-md-4">
+    <div class="card h-100 p-0 overflow-hidden">
+      {% if r.images %}<img src="{{ r.images[0].url }}" class="w-100" style="height:180px;object-fit:cover" alt="">{% endif %}
+      <div class="p-3">
+        <div class="fw-bold">{{ r.title }}</div>
+        <div class="text-muted small">{{ r.incident_date.strftime('%Y-%m-%d') }} · {{ r.location_text or '' }}</div>
+        <a class="btn btn-sm btn-outline-primary mt-2" href="/reports/{{ r.id }}">Details</a>
+      </div>
+    </div>
+  </div>
+{% else %}
+  <p class="text-muted">No active found reports match your filters.</p>
+{% endfor %}
+</div>
+{% endblock %}

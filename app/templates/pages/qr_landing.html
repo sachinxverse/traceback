@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="text-center py-4">
+  <h1>{{ institution.name }}</h1>
+  <p class="lead text-muted">Lost something here? Found something here? Report it and we'll match it.</p>
+  <div class="d-flex justify-content-center gap-3">
+    <a class="btn btn-amber btn-lg" href="/report/lost?institution={{ institution.slug }}">Report a LOST item</a>
+    <a class="btn btn-primary btn-lg" href="/report/found?institution={{ institution.slug }}">Report a FOUND item</a>
+  </div>
+  <p class="text-muted small mt-4">Your report will be tagged with {{ institution.name }} and its location.</p>
+</div>
+{% endblock %}

@@ -1,0 +1,76 @@
+:root {
+  --navy: #0B1F3A;
+  --blue: #1D4ED8;
+  --teal: #0D9488;
+  --amber: #D97706;
+  --bg: #F5F7FA;
+}
+
+body { background: var(--bg); font-size: 16px; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.site-navbar { background: var(--navy); }
+.site-footer { background: #fff; }
+h1, h2, h3, h4, .navbar-brand { color: var(--navy); }
+
+.badge-lost { background: var(--amber); color: #fff; }
+.badge-found { background: var(--blue); color: #fff; }
+.badge-recovered { background: var(--teal); color: #fff; }
+.badge-status { background: #64748b; color: #fff; }
+
+.card { border-radius: 12px; border: 0; box-shadow: 0 1px 3px rgba(11,31,58,.08), 0 1px 2px rgba(11,31,58,.06); }
+.card-header { background: #fff; border-bottom: 1px solid #eef1f5; border-radius: 12px 12px 0 0 !important; font-weight: 600; color: var(--navy); }
+
+.btn-primary { background: var(--blue); border-color: var(--blue); }
+.btn-primary:hover { background: #1e40af; border-color: #1e40af; }
+.btn-teal { background: var(--teal); border-color: var(--teal); color: #fff; }
+.btn-teal:hover { background: #0f766e; border-color: #0f766e; color: #fff; }
+.btn-amber { background: var(--amber); border-color: var(--amber); color: #fff; }
+.btn-amber:hover { background: #b45309; border-color: #b45309; color: #fff; }
+
+.status-pill { display: inline-block; padding: .25em .65em; border-radius: 999px; font-size: .75rem; font-weight: 600; }
+.status-ACTIVE, .status-READY { background: #dcfce7; color: #166534; }
+.status-CLAIM_PENDING, .status-PENDING { background: #fef3c7; color: #92400e; }
+.status-RECOVERED, .status-COMPLETED, .status-APPROVED { background: #ccfbf1; color: #115e59; }
+.status-CLOSED, .status-EXPIRED, .status-REMOVED { background: #e2e8f0; color: #334155; }
+.status-REJECTED { background: #fee2e2; color: #991b1b; }
+.status-DISPUTED { background: #ffedd5; color: #9a3412; }
+.status-WITHDRAWN { background: #e2e8f0; color: #334155; }
+.status-HIGH { background: #16a34a; color: #fff; }
+.status-MEDIUM { background: #f59e0b; color: #fff; }
+.status-LOW { background: #94a3b8; color: #fff; }
+.status-FAILED { background: #fee2e2; color: #991b1b; }
+
+.conf-high { color: #16a34a; font-weight: 700; }
+.conf-medium { color: #d97706; font-weight: 700; }
+.conf-low { color: #64748b; font-weight: 700; }
+
+.match-gauge { font-size: 1.6rem; font-weight: 800; color: var(--navy); }
+.breakdown-bar { height: .5rem; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
+.breakdown-bar > span { display: block; height: 100%; background: var(--blue); }
+
+.notif-badge { position: absolute; top: 2px; right: -4px; background: #dc2626; color: #fff; border-radius: 999px; font-size: .65rem; padding: 0 .4em; }
+.notif-dropdown { position: absolute; right: 0; width: 320px; background: #fff; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.15); display: none; z-index: 1050; max-height: 380px; overflow-y: auto; }
+.notif-dropdown.show { display: block; }
+.notif-item { padding: .6rem .8rem; border-bottom: 1px solid #eef1f5; font-size: .875rem; }
+.notif-item.unread { background: #eff6ff; }
+.notif-item a { color: var(--blue); text-decoration: none; }
+
+.toast-area { position: fixed; top: 70px; right: 16px; z-index: 2000; }
+.toast { min-width: 260px; }
+
+.step-timeline { display: flex; flex-wrap: wrap; gap: .5rem; }
+.step { padding: .35rem .8rem; border-radius: 999px; background: #e2e8f0; color: #64748b; font-size: .8rem; font-weight: 600; }
+.step.done { background: var(--teal); color: #fff; }
+
+#map-picker, #match-map, #admin-heatmap { height: 320px; border-radius: 8px; }
+
+.img-thumb { width: 120px; height: 90px; object-fit: cover; border-radius: 8px; }
+.report-img { max-height: 420px; object-fit: contain; border-radius: 8px; background: #f1f5f9; width: 100%; }
+
+.dropzone { border: 2px dashed #94a3b8; border-radius: 8px; padding: 1.5rem; text-align: center; color: #64748b; cursor: pointer; }
+.dropzone.dragover { border-color: var(--blue); background: #eff6ff; }
+
+.category-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: .5rem; }
+.category-cell { border: 1px solid #e2e8f0; border-radius: 8px; padding: .6rem; text-align: center; cursor: pointer; background: #fff; font-size: .85rem; }
+.category-cell.selected { border-color: var(--blue); background: #eff6ff; font-weight: 600; }
+
+.error-page { text-align: center; padding: 4rem 0; }

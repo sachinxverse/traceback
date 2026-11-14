@@ -1,0 +1,90 @@
+"""Domain enumerations stored as strings (Section 5.1)."""
+import enum
+
+
+class Role(enum.Enum):
+    USER = "USER"
+    STAFF = "STAFF"
+    ADMIN = "ADMIN"
+
+
+class ReportType(enum.Enum):
+    LOST = "LOST"
+    FOUND = "FOUND"
+
+
+class Category(enum.Enum):
+    ELECTRONICS = "ELECTRONICS"
+    BAGS = "BAGS"
+    WALLETS_CARDS = "WALLETS_CARDS"
+    KEYS = "KEYS"
+    CLOTHING = "CLOTHING"
+    JEWELRY_ACCESSORIES = "JEWELRY_ACCESSORIES"
+    DOCUMENTS_ID = "DOCUMENTS_ID"
+    BOOKS_STATIONERY = "BOOKS_STATIONERY"
+    BOTTLES_LUNCHBOXES = "BOTTLES_LUNCHBOXES"
+    SPORTS = "SPORTS"
+    OTHER = "OTHER"
+
+
+class ReportStatus(enum.Enum):
+    ACTIVE = "ACTIVE"
+    CLAIM_PENDING = "CLAIM_PENDING"
+    RECOVERED = "RECOVERED"
+    CLOSED = "CLOSED"
+    EXPIRED = "EXPIRED"
+    REMOVED = "REMOVED"
+
+
+class ProcessingStatus(enum.Enum):
+    PENDING = "PENDING"
+    READY = "READY"
+    FAILED = "FAILED"
+
+
+class Custody(enum.Enum):
+    WITH_FINDER = "WITH_FINDER"
+    AT_INSTITUTION = "AT_INSTITUTION"
+
+
+class MatchStatus(enum.Enum):
+    SUGGESTED = "SUGGESTED"
+    CLAIMED = "CLAIMED"
+    CONFIRMED = "CONFIRMED"
+    DISMISSED = "DISMISSED"
+    EXPIRED = "EXPIRED"
+
+
+class ClaimStatus(enum.Enum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+    DISPUTED = "DISPUTED"
+    COMPLETED = "COMPLETED"
+    WITHDRAWN = "WITHDRAWN"
+
+
+class InstitutionType(enum.Enum):
+    COLLEGE = "COLLEGE"
+    RAILWAY = "RAILWAY"
+    METRO = "METRO"
+    AIRPORT = "AIRPORT"
+    BUS_TERMINAL = "BUS_TERMINAL"
+    MALL = "MALL"
+    VENUE = "VENUE"
+    HOTEL = "HOTEL"
+    PUBLIC = "PUBLIC"
+    OTHER = "OTHER"
+
+
+class NotificationType(enum.Enum):
+    MATCH_FOUND = "MATCH_FOUND"
+    CLAIM_SUBMITTED = "CLAIM_SUBMITTED"
+    CLAIM_APPROVED = "CLAIM_APPROVED"
+    CLAIM_REJECTED = "CLAIM_REJECTED"
+    CLAIM_DISPUTED = "CLAIM_DISPUTED"
+    HANDOVER_MARKED = "HANDOVER_MARKED"
+    RECOVERY_COMPLETED = "RECOVERY_COMPLETED"
+    NEW_MESSAGE = "NEW_MESSAGE"
+    REPORT_REMOVED = "REPORT_REMOVED"
+    SYSTEM = "SYSTEM"

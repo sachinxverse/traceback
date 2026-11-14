@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="d-flex align-items-center gap-2 mb-2">
+      <h1 class="mb-0">{{ report.title }}</h1>
+      <span class="status-pill {{ 'badge-lost' if report.report_type.value=='LOST' else 'badge-found' }} status-pill">{{ report.report_type.value }}</span>
+      <span class="status-pill status-{{ report.status.value }}">{{ report.status.value.replace('_',' ') }}</span>
+    </div>
+    <p class="text-muted">Reported {{ report.created_at.strftime('%Y-%m-%d') }} · incident {{ report.incident_date.strftime('%Y-%m-%d %H:%M') }}</p>
+    {% if report.processing_status.value == 'PENDING' %}
+      <div class="alert alert-info py-2">Processing (embeddings and matching) — matches will appear shortly.</div>
+    {% elif report.processing_status.value == 'FAILED' %}
+      <div class="alert alert-danger py-2">Processing failed. Try <em>re-match</em> below.</div>
+    {% endif %}
+
+    {% if images %}
+    <div id="carousel" class="mb-3">
+      {% for img in images %}
+      <img class="report-img {{ 'd-none' if not loop.first }}" src="{{ img.url }}" alt="Report photo {{ loop.index }}">
+      {% endfor %}
+      {% if images|length > 1 %}
+      <div class="d-flex gap-2 mt-2">
+        <button class="btn btn-sm btn-outline-secondary" id="img-prev">&lt;</button>
+        <button class="btn btn-sm btn-outline-secondary" id="img-next">&gt;</button>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="card p-3 mb-3"><h5>Description</h5><p class="mb-0">{{ report.description }}</p></div>
+    {% if full_view and report.private_details %}
+    <div class="card p-3 mb-3"><h5>Private details <span class="text-muted small">(only you and reviewers)</span></h5>
+      <p class="mb-0">{{ report.private_details }}</p></div>
+    {% endif %}
+    <div class="card p-3 mb-3"><h5>Location</h5>
+      <p class="mb-1">{{ report.location_text or 'Not specified' }}</p>
+      {% if report.latitude %}<div id="report-map" style="height:260px;border-radius:8px"></div>{% endif %}
+    </div>
+    {% if report.institution %}<p>Institution: <strong>{{ report.institution.name }}</strong>
+      {% if report.custody %}<span class="status-pill status-PENDING">{{ report.custody.value.replace('_',' ') }}</span>{% endif %}</p>{% endif %}
+
+    {% if full_view %}
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline-danger" id="close-btn">Close report</button>
+      <button class="btn btn-outline-secondary" id="rematch-btn">Re-match</button>
+      <a class="btn btn-outline-secondary" href="/reports/{{ report.id }}/edit" hidden>Edit</a>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="col-lg-5">
+    <h3>Potential matches</h3>
+    <div id="matches-list"><div class="text-muted">Loading…</div></div>
+    <p class="text-muted small mt-2">Match score ranks likelihood; it is not proof of ownership.</p>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script type="module" src="/static/js/matches.js"></script>
+<script type="module" src="/static/js/reports.js"></script>
+<script type="module" src="/static/js/map.js"></script>
+{% endblock %}

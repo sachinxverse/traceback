@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Claims</h1>
+<ul class="nav nav-tabs mb-3">
+  {% for s in ['All','PENDING','DISPUTED'] %}
+  <li class="nav-item"><a class="nav-link {{ 'active' if loop.first }}" href="#" data-status="{{ s.lower() }}">{{ s }}</a></li>
+  {% endfor %}
+</ul>
+<table class="table" id="claims-table"><thead>
+  <tr><th>ID</th><th>Item</th><th>Status</th><th>Claimant</th><th></th></tr></thead><tbody></tbody></table>
+{% endblock %}
+{% block scripts %}<script type="module" src="/static/js/admin.js"></script>{% endblock %}

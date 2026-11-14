@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Institutions</h1>
+<form class="row g-2 mb-4">
+  <div class="col-md-8"><input class="form-control" name="q" value="{{ q }}" placeholder="Search institutions…"></div>
+  <div class="col-md-2"><button class="btn btn-primary w-100">Search</button></div>
+</form>
+<div class="row g-3">
+{% for i in institutions %}
+  <div class="col-md-4"><div class="card p-3 h-100">
+    <h5>{{ i.name }}</h5>
+    <div class="text-muted small">{{ i.institution_type.value.replace('_',' ') if i.institution_type else '' }}</div>
+    <p class="small mb-2">{{ i.address or '' }}</p>
+    {% if i.verified %}<span class="status-pill status-RECOVERED">Verified</span>{% endif %}
+  </div></div>
+{% else %}
+  <p class="text-muted">No institutions found.</p>
+{% endfor %}
+</div>
+{% endblock %}

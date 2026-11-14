@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Claims</h1>
+<ul class="nav nav-tabs mb-3">
+  <li class="nav-item"><a class="nav-link active" href="#tab-mine" data-bs-toggle="tab">My claims</a></li>
+  <li class="nav-item"><a class="nav-link" href="#tab-incoming" data-bs-toggle="tab">Incoming (to review)</a></li>
+</ul>
+<div class="tab-content">
+<div class="tab-pane fade show active" id="tab-mine">
+{% for c in my_claims %}
+  <div class="card p-3 mb-2 d-flex flex-row align-items-center gap-3">
+    <div class="flex-grow-1"><strong>Claim #{{ c.id }}</strong>
+      <span class="status-pill status-{{ c.verification_status.value }}">{{ c.verification_status.value }}</span>
+      <div class="text-muted small">on "{{ c.match.lost_report.title }}" · {{ c.created_at.strftime('%Y-%m-%d') }}</div>
+    </div>
+    <a class="btn btn-sm btn-outline-primary" href="/claims/{{ c.id }}">Open</a>
+  </div>
+{% else %}<p class="text-muted">You haven't submitted any claims.</p>{% endfor %}
+</div>
+<div class="tab-pane fade" id="tab-incoming">
+{% for c in incoming %}
+  <div class="card p-3 mb-2 d-flex flex-row align-items-center gap-3">
+    <div class="flex-grow-1"><strong>Claim #{{ c.id }}</strong>
+      <span class="status-pill status-{{ c.verification_status.value }}">{{ c.verification_status.value }}</span>
+      <div class="text-muted small">for "{{ c.report.title }}" · {{ c.created_at.strftime('%Y-%m-%d') }}</div>
+    </div>
+    <a class="btn btn-sm btn-outline-primary" href="/claims/{{ c.id }}">Review</a>
+  </div>
+{% else %}<p class="text-muted">No claims awaiting your review.</p>{% endfor %}
+</div>
+</div>
+{% endblock %}

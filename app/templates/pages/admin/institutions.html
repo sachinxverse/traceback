@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between mb-3">
+  <h1>Institutions</h1>
+  <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#inst-modal">New institution</button>
+</div>
+<table class="table" id="inst-table"><thead>
+  <tr><th>Name</th><th>Slug</th><th>Type</th><th>Verified</th><th>Active</th><th>QR</th><th></th></tr>
+</thead><tbody>
+{% for i in institutions %}
+<tr data-id="{{ i.id }}">
+  <td>{{ i.name }}</td><td>/i/{{ i.slug }}</td><td>{{ i.institution_type.value if i.institution_type else '—' }}</td>
+  <td>{{ '✔' if i.verified else '—' }}</td><td>{{ '✔' if i.is_active else '—' }}</td>
+  <td><a href="/api/v1/institutions/{{ i.id }}/qr.png" download>Download QR</a> ·
+      <a href="/admin/institutions/{{ i.id }}/poster">Poster</a></td>
+  <td><button class="btn btn-sm btn-outline-secondary edit-inst" data-id="{{ i.id }}">Edit</button></td>
+</tr>
+{% endfor %}
+</tbody></table>
+
+<div class="modal fade" id="inst-modal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title">Institution</h5></div>
+  <div class="modal-body">
+    <input type="hidden" id="inst-id">
+    <div class="mb-2"><label class="form-label">Name</label><input class="form-control" id="inst-name"></div>
+    <div class="mb-2"><label class="form-label">Type</label>
+      <select class="form-select" id="inst-type">
+        {% for t in ['COLLEGE','RAILWAY','METRO','AIRPORT','BUS_TERMINAL','MALL','VENUE','HOTEL','PUBLIC','OTHER'] %}
+        <option>{{ t }}</option>{% endfor %}</select></div>
+    <div class="mb-2"><label class="form-label">Address</label><input class="form-control" id="inst-address"></div>
+    <div class="row mb-2"><div class="col"><label class="form-label">Latitude</label><input class="form-control" id="inst-lat"></div>
+    <div class="col"><label class="form-label">Longitude</label><input class="form-control" id="inst-lng"></div></div>
+    <div class="form-check"><input class="form-check-input" type="checkbox" id="inst-verified"><label class="form-check-label">Verified</label></div>
+    <div class="form-check"><input class="form-check-input" type="checkbox" id="inst-active" checked><label class="form-check-label">Active</label></div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+  <button class="btn btn-primary" id="inst-save">Save</button></div>
+</div></div></div>
+{% endblock %}
+{% block scripts %}<script type="module" src="/static/js/admin.js"></script>{% endblock %}

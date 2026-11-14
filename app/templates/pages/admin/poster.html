@@ -1,0 +1,9 @@
+<!doctype html><html><head><meta charset="utf-8"><title>{{ institution.name }} — QR poster</title>
+<link rel="stylesheet" href="/static/css/app.css"></head>
+<body style="display:grid;place-items:center;min-height:100vh">
+<div style="text-align:center">
+  <h1>{{ institution.name }}</h1>
+  <img src="/api/v1/institutions/{{ institution.id }}/qr.png?size=600" alt="QR code" style="width:320px">
+  <p class="fs-4" style="color:#0B1F3A"><strong>Lost something? Found something? Scan to report.</strong></p>
+</div>
+</body></html>
