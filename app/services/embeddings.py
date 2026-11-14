@@ -21,10 +21,9 @@ def to_blob(vec: np.ndarray) -> bytes:
 def from_blob(blob: Optional[bytes], dim: int) -> Optional[np.ndarray]:
     if blob is None:
         return None
-    vec = np.frombuffer(blob, dtype=np.float32)
-    if vec.size != dim:
+    if len(blob) != dim * 4:  # float32
         return None
-    return vec
+    return np.frombuffer(blob, dtype=np.float32)
 
 
 def l2normalise(vec: np.ndarray) -> np.ndarray:

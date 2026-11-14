@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.venv/
+instance/
+*.db
+.env
+.flask_run.log
+ai_install.log
+pip_freeze.txt
+.coverage
+htmlcov/

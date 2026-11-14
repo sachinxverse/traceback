@@ -20,17 +20,13 @@ def current_user() -> User:
 
 
 def roles_required(*roles):
-    """Decorator restricting a route to the given roles. ADMIN always allowed
-    unless the route is ADMIN-only."""
+    """Decorator restricting a route to the given roles. ADMIN is always
+    allowed (platform-wide access per Section 6)."""
     def decorator(fn):
         @wraps(fn)
         def wrapper(*args, **kwargs):
             user = current_user()
-            if Role.ADMIN in roles:
-                allowed = user.role == Role.ADMIN
-            else:
-                allowed = user.role in roles or user.role == Role.ADMIN
-            if not allowed:
+            if user.role not in roles and user.role != Role.ADMIN:
                 raise ApiError("FORBIDDEN", "Role not allowed", status=403)
             return fn(*args, **kwargs)
         return wrapper

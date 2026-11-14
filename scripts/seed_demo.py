@@ -165,6 +165,27 @@ def run_seed(app):
     for r in reports:
         process_report(r.id)
 
+    # write labelled pairs for scripts/evaluate_matching.py
+    import csv
+    import os
+    pairs_by_category = {}
+    for r in reports:
+        pairs_by_category.setdefault(r.category.value, []).append(r)
+    labels_path = os.path.join(os.path.dirname(__file__), "labels.csv")
+    with open(labels_path, "w", newline="") as fh:
+        writer = csv.writer(fh)
+        writer.writerow(["lost_id", "found_id", "is_same_item"])
+        for cat, rs in sorted(pairs_by_category.items()):
+            losts = [r for r in rs if r.report_type == ReportType.LOST]
+            founds = [r for r in rs if r.report_type == ReportType.FOUND]
+            for i, l in enumerate(losts):
+                if i < len(founds):
+                    # true pair (same object)
+                    writer.writerow([l.id, founds[i].id, 1])
+                for j, f in enumerate(founds):
+                    if j != i:
+                        writer.writerow([l.id, f.id, 0])
+
     _create_sample_claims(reports, users, created)
     db.session.commit()
     return created
