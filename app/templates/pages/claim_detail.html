@@ -1,77 +1,120 @@
 {% extends "base.html" %}
+{% from "macros/ui.html" import status_pill %}
+{% block title %}Claim #{{ claim.id }} — TRACEBACK{% endblock %}
 {% block content %}
-<h1>Claim #{{ claim.id }}
-  <span class="status-pill status-{{ claim.verification_status.value }}">{{ claim.verification_status.value.replace('_',' ') }}</span>
-</h1>
-
-<div class="card p-4 mb-3">
-  <h5>Claimant's identifying details</h5>
-  <p class="mb-0">{{ claim.claim_details }}</p>
-</div>
-
-{% if is_reviewer %}
-<div class="card p-4 mb-3 border-warning">
-  <h5>Found report's private details <span class="text-muted small">(for side-by-side comparison)</span></h5>
-  <p class="mb-0">{{ claim.report.private_details or '—' }}</p>
-</div>
-{% if claim.proof_images %}
-<div class="card p-4 mb-3"><h5>Proof photos</h5>
-{% for img in claim.proof_images %}<img class="img-thumb me-2" src="/api/v1/claim-images/{{ img.id }}" alt="">{% endfor %}
-</div>
-{% endif %}
-{% endif %}
-
-<h5 class="mt-4">Timeline</h5>
-<div class="step-timeline mb-4">
-  <span class="step done">Submitted</span>
-  <span class="step {{ 'done' if claim.verification_status.value in ('APPROVED','COMPLETED') }}">Reviewed</span>
-  <span class="step {{ 'done' if claim.handed_over_at }}">Handed over</span>
-  <span class="step {{ 'done' if claim.verification_status.value == 'COMPLETED' }}">Recovered</span>
-</div>
-
-<div class="d-flex gap-2 flex-wrap mb-4" id="claim-actions">
-  {% if is_reviewer and claim.verification_status.value in ('PENDING','DISPUTED') %}
-    <button class="btn btn-teal" data-action="approve">Approve</button>
-    <button class="btn btn-outline-danger" data-action="reject" data-bs-toggle="modal" data-bs-target="#note-modal">Reject</button>
-  {% endif %}
-  {% if is_reviewer and claim.verification_status.value == 'APPROVED' and not claim.handed_over_at %}
-    <button class="btn btn-primary" data-action="mark-handed-over">Mark handed over</button>
-  {% endif %}
-  {% if is_claimant and claim.handed_over_at and claim.verification_status.value == 'APPROVED' %}
-    <button class="btn btn-teal" data-action="confirm-received">Confirm received</button>
-  {% endif %}
-  {% if is_claimant and claim.verification_status.value in ('PENDING','APPROVED') %}
-    <button class="btn btn-outline-secondary" data-action="withdraw">Withdraw</button>
-  {% endif %}
-  {% if is_claimant and claim.verification_status.value == 'REJECTED' %}
-    <button class="btn btn-outline-warning" data-action="dispute" data-bs-toggle="modal" data-bs-target="#note-modal">Dispute</button>
-  {% endif %}
-</div>
-
-{% if claim.verification_status.value in ('PENDING','APPROVED','DISPUTED') %}
-<div class="card p-4 mb-4">
-  <h5>Messaging</h5>
-  <div id="messages" class="mb-2" style="max-height:320px;overflow-y:auto"></div>
-  <form id="message-form" class="input-group">
-    <input class="form-control" id="message-input" maxlength="1000" placeholder="Type a message…">
-    <button class="btn btn-primary" type="submit">Send</button>
-  </form>
-  <div id="contact-warning" class="alert alert-warning py-1 px-2 mt-2 d-none small">
-    This looks like a phone number or email — keep contact details in-app.</div>
-</div>
-{% endif %}
-
-<div class="modal fade" id="note-modal" tabindex="-1">
-  <div class="modal-dialog"><div class="modal-content">
-    <div class="modal-header"><h5 class="modal-title" id="note-title">Add note</h5></div>
-    <div class="modal-body">
-      <textarea class="form-control" id="note-input" rows="3" maxlength="1000"></textarea>
+<div class="container py-4">
+  <div class="page-head">
+    <div>
+      <div class="section-label">Claim review</div>
+      <h1>Claim #{{ claim.id }} {{ status_pill(claim.verification_status.value) }}</h1>
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-      <button class="btn btn-primary" id="note-confirm">Confirm</button>
+    <a class="btn btn-sm btn-outline-secondary" href="/claims"><i class="bi bi-arrow-left me-1"></i>All claims</a>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <div class="card p-4 mb-3">
+        <div class="section-label mb-2">Claimant's identifying details</div>
+        <p class="mb-0">{{ claim.claim_details }}</p>
+      </div>
+
+      {% if is_reviewer %}
+      <div class="card split-priv p-4 mb-3">
+        <div class="private-tag mb-1"><i class="bi bi-eye-slash me-1"></i>Found report's private details — compare carefully</div>
+        <p class="mb-0">{{ claim.report.private_details or '—' }}</p>
+      </div>
+      {% if claim.proof_images %}
+      <div class="card p-4 mb-3">
+        <div class="section-label mb-2">Proof photos</div>
+        {% for img in claim.proof_images %}
+        <img class="img-thumb me-2 mb-2" style="width:140px;height:105px" src="/api/v1/claim-images/{{ img.id }}" alt="">
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% endif %}
+
+      {% if is_reviewer and claim.verification_status.value in ('PENDING','DISPUTED') %}
+      <div class="card p-4 mb-3">
+        <h5 class="mb-2">Decision</h5>
+        <p class="text-muted small">Approve only if the claimant's details genuinely match what only the true owner would know.</p>
+        <div class="d-flex gap-2">
+          <button class="btn btn-teal" data-action="approve"><i class="bi bi-check2 me-1"></i>Approve</button>
+          <button class="btn btn-outline-danger" data-action="reject" data-bs-toggle="modal" data-bs-target="#note-modal"><i class="bi bi-x-lg me-1"></i>Reject</button>
+        </div>
+      </div>
+      {% endif %}
     </div>
-  </div></div>
+
+    <div class="col-lg-5">
+      <div class="card p-4 mb-3">
+        <div class="section-label mb-3">Timeline</div>
+        <div class="step-timeline mb-3">
+          <span class="step done"><i class="bi bi-flag"></i>Submitted</span>
+          <span class="step {{ 'done' if claim.verification_status.value in ('APPROVED','COMPLETED') }}"><i class="bi bi-person-check"></i>Reviewed</span>
+          <span class="step {{ 'done' if claim.handed_over_at }}"><i class="bi bi-box-seam"></i>Handed over</span>
+          <span class="step {{ 'done' if claim.verification_status.value == 'COMPLETED' }}"><i class="bi bi-patch-check"></i>Recovered</span>
+        </div>
+        <div class="small text-muted">
+          {% if claim.reviewer_id %}Reviewed by user #{{ claim.reviewer_id }}{% endif %}
+          {% if claim.review_note %}· Note: "{{ claim.review_note }}"{% endif %}
+        </div>
+      </div>
+
+      <div class="card p-4 mb-3">
+        <div class="section-label mb-2">Actions</div>
+        <div class="d-flex gap-2 flex-wrap" id="claim-actions">
+          {% if is_reviewer and claim.verification_status.value == 'APPROVED' and not claim.handed_over_at %}
+            <button class="btn btn-primary" data-action="mark-handed-over"><i class="bi bi-box-seam me-1"></i>Mark handed over</button>
+          {% endif %}
+          {% if is_claimant and claim.handed_over_at and claim.verification_status.value == 'APPROVED' %}
+            <button class="btn btn-teal" data-action="confirm-received"><i class="bi bi-patch-check me-1"></i>Confirm received</button>
+          {% endif %}
+          {% if is_claimant and claim.verification_status.value in ('PENDING','APPROVED') %}
+            <button class="btn btn-outline-secondary" data-action="withdraw">Withdraw</button>
+          {% endif %}
+          {% if is_claimant and claim.verification_status.value == 'REJECTED' %}
+            <button class="btn btn-outline-warning" data-action="dispute" data-bs-toggle="modal" data-bs-target="#note-modal"><i class="bi bi-flag me-1"></i>Dispute</button>
+          {% endif %}
+        </div>
+        <div id="claim-actions-empty" class="text-muted small">
+          {% if not (is_reviewer and claim.verification_status.value in ('PENDING','DISPUTED'))
+             and not (is_claimant and claim.verification_status.value in ('PENDING','APPROVED','REJECTED')) %}
+          No actions available in the current state.
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if claim.verification_status.value in ('PENDING','APPROVED','DISPUTED') %}
+  <div class="card p-4 mt-2" id="messaging-panel" data-match-id="{{ claim.match_id }}">
+    <div class="d-flex align-items-center gap-2 mb-2">
+      <h5 class="mb-0"><i class="bi bi-chat-dots me-2" style="color:var(--blue)"></i>Messaging</h5>
+      <span class="text-muted small ms-auto"><span class="live-dot"></span> live — polls every 10 s</span>
+    </div>
+    <div id="messages" class="chat-panel mb-3 d-flex flex-column"></div>
+    <form id="message-form" class="input-group">
+      <input class="form-control" id="message-input" maxlength="1000" placeholder="Type a message…" autocomplete="off">
+      <button class="btn btn-primary" type="submit"><i class="bi bi-send"></i></button>
+    </form>
+    <div id="contact-warning" class="alert alert-warning py-1 px-2 mt-2 d-none small">
+      <i class="bi bi-exclamation-triangle me-1"></i>This looks like a phone number or email — keep contact details in-app.</div>
+  </div>
+  {% endif %}
+
+  <div class="modal fade" id="note-modal" tabindex="-1">
+    <div class="modal-dialog"><div class="modal-content" style="border-radius:16px">
+      <div class="modal-header"><h5 class="modal-title" id="note-title">Add note</h5>
+        <button class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <textarea class="form-control" id="note-input" rows="3" maxlength="1000"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-primary" id="note-confirm">Confirm</button>
+      </div>
+    </div></div>
+  </div>
 </div>
 {% endblock %}
 {% block scripts %}<script type="module" src="/static/js/claims.js"></script>{% endblock %}

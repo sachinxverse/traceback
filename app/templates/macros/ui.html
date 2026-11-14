@@ -1,0 +1,55 @@
+{# Reusable UI components for Project TRACEBACK #}
+
+{% macro status_pill(value, label=None) -%}
+<span class="status-pill status-{{ value }}">{{ (label or value|replace('_',' '))|title if False else (label or (value|replace('_',' ')|title)) }}</span>
+{%- endmacro %}
+
+{% macro type_badge(t) -%}
+<span class="status-pill {{ 'badge-lost' if t == 'LOST' else 'badge-found' }}">{{ t }}</span>
+{%- endmacro %}
+
+{% macro score_ring(score, size='lg', label_suffix='%') -%}
+{# score: 0-100 integer #}
+<div class="score-ring ring-{{ size }}">
+  <svg viewBox="0 0 44 44" aria-hidden="true">
+    <circle class="ring-track" cx="22" cy="22" r="19" fill="none" stroke-width="4.5"></circle>
+    <circle class="ring-fill" cx="22" cy="22" r="19" fill="none" stroke-width="4.5"
+      stroke="{{ '#16A34A' if score >= 75 else ('#F59E0B' if score >= 55 else '#94A3B8') }}"
+      stroke-dasharray="{{ (119.38 * score / 100) | round(2) }} 119.38"></circle>
+  </svg>
+  <span class="ring-label">{{ score }}{{ label_suffix }}</span>
+</div>
+{%- endmacro %}
+
+{% macro breakdown_row(sig, value) -%}
+<div class="mb-2">
+  <div class="d-flex justify-content-between align-items-center">
+    <small class="text-muted" style="font-weight:600">
+      <i class="bi {{ {'image':'bi-images','text':'bi-chat-left-text','location':'bi-geo-alt','time':'bi-clock'}[sig] }}"></i>
+      {{ sig|capitalize }}</small>
+    <small class="fw-bold" style="color:var(--navy)">{{ value if value is not none else '—' }}</small>
+  </div>
+  <div class="breakdown-bar bar-{{ sig }}"><span data-width="{{ value or 0 }}"></span></div>
+</div>
+{%- endmacro %}
+
+{% macro empty_state(icon, title, hint, cta_href=None, cta_text=None) -%}
+<div class="empty-state">
+  <div class="es-icon"><i class="bi {{ icon }}"></i></div>
+  <div class="es-title">{{ title }}</div>
+  <div class="small mb-3">{{ hint }}</div>
+  {% if cta_href %}<a class="btn btn-sm btn-primary" href="{{ cta_href }}">{{ cta_text }}</a>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro skeleton_lines(n=3) -%}
+{% for _ in range(n) %}<div class="skeleton mb-2" style="height:14px;width:{{ 90 - loop.index0 * 12 }}%"></div>{% endfor %}
+{%- endmacro %}
+
+{% macro confidence_pill(conf) -%}
+<span class="status-pill status-{{ conf }}">{{ conf }} confidence</span>
+{%- endmacro %}
+
+{% macro owner_note() -%}
+<p class="text-muted small mb-0"><i class="bi bi-shield-check me-1"></i>Match scores rank likelihood under the configured model. They are not proof of ownership.</p>
+{%- endmacro %}

@@ -1,14 +1,55 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>How it works</h1>
-<div class="card p-4 mb-3"><h5>Matching</h5><p class="mb-0">When you submit a report, we compare it with reports of the
-opposite type using image similarity, wording similarity, location proximity and time proximity. A ranked list of
-candidate matches appears on your report page with a score breakdown.</p></div>
-<div class="card p-4 mb-3"><h5>Claims</h5><p class="mb-0">A match is only a recommendation. To recover an item the owner
-submits a claim with details only the true owner would know (serial numbers, scratches, contents). The finder — or the
-institution holding the item — reviews and approves or rejects.</p></div>
-<div class="card p-4 mb-3"><h5>Privacy</h5><p class="mb-0">Contact details are never shared between users. Case messaging
-opens only after a claim exists. Private details are visible only to the reviewer and admins.</p></div>
-<div class="card p-4"><h5>Human verification</h5><p class="mb-0">No automated decision ever approves a claim or establishes
-ownership. Every handover is confirmed by a person.</p></div>
+<div class="container section-pad">
+  <div class="text-center mb-5">
+    <div class="section-label">How TRACEBACK works</div>
+    <h1>Matching you can trust, decisions made by people</h1>
+    <p class="text-muted mx-auto" style="max-width:720px">Our engine is fast, but the final word is always human.
+      Here is the full journey of a lost item, from report to reunion.</p>
+  </div>
+
+  <div class="row g-4 justify-content-center mb-5">
+    <div class="col-md-6"><div class="card p-4 h-100">
+      <div class="d-flex align-items-center gap-3 mb-2">
+        <span class="d-grid" style="width:40px;height:40px;border-radius:12px;background:var(--amber);color:#fff"><i class="bi bi-search-heart"></i></span>
+        <h5 class="mb-0">Matching</h5>
+      </div>
+      <p class="text-muted small mb-0">When you submit a report, we compare it with reports of the opposite type using
+        four signals: image similarity (OpenCLIP), wording similarity (Sentence Transformers), location proximity and
+        time proximity. Every match page shows the score breakdown of each signal — nothing is hidden in a black box.</p>
+    </div></div>
+    <div class="col-md-6"><div class="card p-4 h-100">
+      <div class="d-flex align-items-center gap-3 mb-2">
+        <span class="d-grid" style="width:40px;height:40px;border-radius:12px;background:var(--blue);color:#fff"><i class="bi bi-clipboard-check"></i></span>
+        <h5 class="mb-0">Claims</h5>
+      </div>
+      <p class="text-muted small mb-0">A match is only a recommendation. To recover an item, the owner submits a claim
+        with details only the true owner would know — serial numbers, scratches, exact contents. The finder — or the
+        institution holding the item — compares those details side by side and decides.</p>
+    </div></div>
+    <div class="col-md-6"><div class="card p-4 h-100">
+      <div class="d-flex align-items-center gap-3 mb-2">
+        <span class="d-grid" style="width:40px;height:40px;border-radius:12px;background:var(--teal);color:#fff"><i class="bi bi-lock"></i></span>
+        <h5 class="mb-0">Privacy</h5>
+      </div>
+      <p class="text-muted small mb-0">Contact details are never shared between users. Case messaging opens only after a
+        claim exists, so conversations always have a real reason. Private identifying details are visible only to the
+        reviewer and platform admins — never to match counterparts.</p>
+    </div></div>
+    <div class="col-md-6"><div class="card p-4 h-100">
+      <div class="d-flex align-items-center gap-3 mb-2">
+        <span class="d-grid" style="width:40px;height:40px;border-radius:12px;background:var(--navy);color:#fff"><i class="bi bi-person-check"></i></span>
+        <h5 class="mb-0">Human verification</h5>
+      </div>
+      <p class="text-muted small mb-0">No automated decision ever approves a claim or establishes ownership. Handover is
+        confirmed by the reviewer, receipt is confirmed by the claimant, and both reports are marked recovered only then.</p>
+    </div></div>
+  </div>
+
+  <div class="cta-band text-center">
+    <h2 class="text-white mb-2">Ready to try it?</h2>
+    <p class="mb-4" style="color:#B9CBE4">Create an account and file your first report in under two minutes.</p>
+    <a href="/register" class="btn btn-light btn-hero">Create an account</a>
+  </div>
+</div>
 {% endblock %}

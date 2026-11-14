@@ -1,9 +1,14 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Users</h1>
-<input class="form-control mb-3" id="user-q" placeholder="Search by name or email…">
+<div class="container py-4">
+<div class="page-head"><div>
+  <div class="section-label">Directory</div>
+  <h1>Users</h1>
+</div>
+<a class="btn btn-sm btn-outline-secondary" href="/admin"><i class="bi bi-speedometer2 me-1"></i>Overview</a></div><input class="form-control mb-3" id="user-q" placeholder="Search by name or email…">
 <table class="table" id="users-table"><thead>
   <tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th><th>Institution</th><th>Active</th><th></th></tr>
 </thead><tbody></tbody></table>
+</div>
 {% endblock %}
 {% block scripts %}<script type="module" src="/static/js/admin.js"></script>{% endblock %}

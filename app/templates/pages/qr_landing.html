@@ -1,12 +1,14 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="text-center py-4">
+  <div class="mx-auto mb-3 d-grid" style="width:64px;height:64px;border-radius:18px;background:rgba(29,78,216,.1);color:var(--blue)"><i class="bi bi-qr-code fs-2"></i></div>
+  <div class="section-label">Institution report point</div>
   <h1>{{ institution.name }}</h1>
   <p class="lead text-muted">Lost something here? Found something here? Report it and we'll match it.</p>
-  <div class="d-flex justify-content-center gap-3">
-    <a class="btn btn-amber btn-lg" href="/report/lost?institution={{ institution.slug }}">Report a LOST item</a>
-    <a class="btn btn-primary btn-lg" href="/report/found?institution={{ institution.slug }}">Report a FOUND item</a>
+  <div class="d-flex justify-content-center gap-3 flex-wrap">
+    <a class="btn btn-amber btn-lg" href="/report/lost?institution={{ institution.slug }}"><i class="bi bi-search-heart me-1"></i>Report a LOST item</a>
+    <a class="btn btn-primary btn-lg" href="/report/found?institution={{ institution.slug }}"><i class="bi bi-hand-thumbs-up me-1"></i>Report a FOUND item</a>
   </div>
-  <p class="text-muted small mt-4">Your report will be tagged with {{ institution.name }} and its location.</p>
+  <p class="text-muted small mt-4"><i class="bi bi-shield-check me-1"></i>Your report will be tagged with {{ institution.name }} and its location. Login is required to submit.</p>
 </div>
 {% endblock %}

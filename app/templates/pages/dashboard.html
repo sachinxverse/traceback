@@ -1,57 +1,91 @@
 {% extends "base.html" %}
+{% from "macros/ui.html" import status_pill, type_badge, empty_state, score_ring %}
+{% block title %}Dashboard — TRACEBACK{% endblock %}
 {% block content %}
-<h1>Dashboard</h1>
-<div class="row g-3 mb-4">
-  <div class="col-md"><div class="card p-3"><span class="badge badge-lost status-pill">LOST</span>
-    <div class="fs-4 fw-bold mt-2">{{ cards.lost_active }}</div><div class="text-muted small">Active lost reports</div></div></div>
-  <div class="col-md"><div class="card p-3"><span class="badge badge-found status-pill">FOUND</span>
-    <div class="fs-4 fw-bold mt-2">{{ cards.found_active }}</div><div class="text-muted small">Active found reports</div></div></div>
-  <div class="col-md"><div class="card p-3"><div class="fs-4 fw-bold">{{ cards.new_matches }}</div>
-    <div class="text-muted small">New matches</div></div></div>
-  <div class="col-md"><div class="card p-3"><div class="fs-4 fw-bold">{{ cards.pending_claims }}</div>
-    <div class="text-muted small">Pending claims</div></div></div>
-  <div class="col-md"><div class="card p-3"><div class="fs-4 fw-bold">{{ cards.recovered }}</div>
-    <div class="text-muted small">Recovered</div></div></div>
-</div>
-
-<div class="d-flex gap-2 mb-4">
-  <a class="btn btn-amber" href="/report/lost">Report Lost</a>
-  <a class="btn btn-primary" href="/report/found">Report Found</a>
-  <a class="btn btn-outline-secondary" href="/claims">My claims</a>
-  <a class="btn btn-outline-secondary" href="/browse">Browse found items</a>
-</div>
-
-<h3 class="mb-3">My reports</h3>
-<div class="d-flex justify-content-center mb-3"><ul class="nav nav-tabs">
-  <li class="nav-item"><a class="nav-link active" href="#tab-lost" data-bs-toggle="tab">Lost</a></li>
-  <li class="nav-item"><a class="nav-link" href="#tab-found" data-bs-toggle="tab">Found</a></li>
-</ul></div>
-{% for tab, rtype in [('tab-lost','LOST'), ('tab-found','FOUND')] %}
-<div class="tab-content">
-<div class="tab-pane fade {{ 'show active' if loop.first }}" id="{{ tab }}">
-{% set any = namespace(v=false) %}
-{% for d in report_data if d.report.report_type.value == rtype %}
-  {% set any.v = true %}
-  {% set r = d.report %}
-  <div class="card p-3 mb-2">
-    <div class="d-flex align-items-center gap-3">
-      {% if r.images %}<img class="img-thumb" src="{{ r.images[0].url }}" alt="">{% endif %}
-      <div class="flex-grow-1">
-        <div class="fw-bold">{{ r.title }}
-          <span class="status-pill status-{{ r.status.value }}">{{ r.status.value.replace('_',' ') }}</span>
-          {% if r.processing_status.value == 'PENDING' %}<span class="status-pill status-PENDING">Processing…</span>{% endif %}
-        </div>
-        <div class="text-muted small">{{ r.incident_date.strftime('%Y-%m-%d') }} · {{ r.location_text or 'no location' }}</div>
-      </div>
-      <div class="text-end">
-        {% if d.top_score %}<div class="match-gauge">{{ d.top_score }}%</div><div class="text-muted small">top match</div>{% endif %}
-        <div><a class="btn btn-sm btn-outline-primary" href="/reports/{{ r.id }}">Open</a></div>
-      </div>
+<div class="container py-4">
+  <div class="page-head">
+    <div>
+      <div class="section-label">Welcome back</div>
+      <h1>{{ nav_user.first_name }}'s recovery desk</h1>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <a class="btn btn-amber" href="/report/lost"><i class="bi bi-search-heart me-1"></i>Report Lost</a>
+      <a class="btn btn-primary" href="/report/found"><i class="bi bi-hand-thumbs-up me-1"></i>Report Found</a>
     </div>
   </div>
-{% endfor %}
-{% if not any.v %}<div class="text-muted">No {{ rtype|lower }} reports yet.</div>{% endif %}
+
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md"><div class="card kpi-card kpi-lost card-hover">
+      <div class="kpi-icon"><i class="bi bi-search-heart"></i></div>
+      <div class="kpi-value">{{ cards.lost_active }}</div><div class="kpi-label">Active lost</div></div></div>
+    <div class="col-6 col-md"><div class="card kpi-card kpi-found card-hover">
+      <div class="kpi-icon"><i class="bi bi-hand-thumbs-up"></i></div>
+      <div class="kpi-value">{{ cards.found_active }}</div><div class="kpi-label">Active found</div></div></div>
+    <div class="col-6 col-md"><div class="card kpi-card kpi-navy card-hover">
+      <div class="kpi-icon"><i class="bi bi-stars"></i></div>
+      <div class="kpi-value">{{ cards.new_matches }}</div><div class="kpi-label">New matches</div></div></div>
+    <div class="col-6 col-md"><div class="card kpi-card kpi-slate card-hover">
+      <div class="kpi-icon"><i class="bi bi-clipboard-check"></i></div>
+      <div class="kpi-value">{{ cards.pending_claims }}</div><div class="kpi-label">Pending claims</div></div></div>
+    <div class="col-6 col-md"><div class="card kpi-card kpi-teal card-hover">
+      <div class="kpi-icon"><i class="bi bi-patch-check"></i></div>
+      <div class="kpi-value">{{ cards.recovered }}</div><div class="kpi-label">Recovered</div></div></div>
+  </div>
+
+  <div class="d-flex gap-2 mb-4 flex-wrap">
+    <a class="btn btn-sm btn-outline-secondary" href="/claims"><i class="bi bi-clipboard-check me-1"></i>My claims</a>
+    <a class="btn btn-sm btn-outline-secondary" href="/browse"><i class="bi bi-collection me-1"></i>Browse found items</a>
+    <a class="btn btn-sm btn-outline-secondary" href="/notifications"><i class="bi bi-bell me-1"></i>Notifications</a>
+  </div>
+
+  <div class="d-flex justify-content-center mb-1">
+    <ul class="nav nav-pills tab-pills">
+      <li class="nav-item"><a class="nav-link active" href="#tab-lost" data-bs-toggle="tab">Lost</a></li>
+      <li class="nav-item"><a class="nav-link" href="#tab-found" data-bs-toggle="tab">Found</a></li>
+    </ul>
+  </div>
+  <div class="tab-content">
+  {% for tab, rtype, accent in [('tab-lost','LOST','bi-search-heart'), ('tab-found','FOUND','bi-hand-thumbs-up')] %}
+    <div class="tab-pane fade {{ 'show active' if loop.first }}" id="{{ tab }}">
+      {% set tab_reports = (report_data | selectattr('report.report_type.value', 'equalto', rtype) | list) %}
+      {% if tab_reports %}
+        {% for d in tab_reports %}
+        {% set r = d.report %}
+        <div class="card card-hover p-3 mb-2">
+          <div class="d-flex align-items-center gap-3 flex-wrap flex-sm-nowrap">
+            {% if r.images %}
+              <img class="img-thumb" src="{{ r.images[0].url }}" alt="Photo of {{ r.title }}">
+            {% else %}
+              <div class="img-thumb d-grid" style="place-items:center;color:#94A3B8"><i class="bi bi-image fs-4"></i></div>
+            {% endif %}
+            <div class="flex-grow-1 min-w-0">
+              <div class="d-flex align-items-center gap-2 flex-wrap">
+                {{ type_badge(r.report_type.value) }}
+                <span class="fw-bold text-truncate" style="max-width:320px">{{ r.title }}</span>
+                {{ status_pill(r.status.value) }}
+                {% if r.processing_status.value == 'PENDING' %}<span class="status-pill status-PENDING"><span class="spinner-border spinner-border-sm" style="width:.7em;height:.7em"></span> Matching…</span>{% endif %}
+              </div>
+              <div class="text-muted small mt-1">
+                <i class="bi bi-calendar3 me-1"></i>{{ r.incident_date.strftime('%Y-%m-%d') }}
+                · <i class="bi bi-geo-alt me-1"></i>{{ r.location_text or 'no location' }}
+              </div>
+            </div>
+            <div class="text-end d-flex align-items-center gap-3">
+              {% if d.top_score %}
+                <a href="/reports/{{ r.id }}" class="text-decoration-none">{{ score_ring(d.top_score, 'sm') }}</a>
+              {% endif %}
+              <a class="btn btn-sm btn-outline-primary" href="/reports/{{ r.id }}">Open <i class="bi bi-arrow-right"></i></a>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        {{ empty_state(accent, 'No ' ~ (rtype|lower) ~ ' reports yet',
+            rtype == 'LOST' and 'Lost something? File it now — matching starts immediately.' or 'Found something? File it so its owner can claim it.',
+            rtype == 'LOST' and '/report/lost' or '/report/found', 'Create a ' ~ (rtype|lower) ~ ' report') }}
+      {% endif %}
+    </div>
+  {% endfor %}
+  </div>
 </div>
-</div>
-{% endfor %}
 {% endblock %}

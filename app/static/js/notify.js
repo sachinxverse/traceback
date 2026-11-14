@@ -46,6 +46,8 @@ function escapeHtml(s) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // remember current user id for chat bubble alignment
+  apiFetch('/auth/me').then(u => { window.__myUserId = u.id; }).catch(() => {});
   refreshBadge();
   setInterval(refreshBadge, 30000);
   const bell = document.getElementById('notif-bell');

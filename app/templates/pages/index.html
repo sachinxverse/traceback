@@ -1,46 +1,126 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="hero text-center py-5">
-  <h1 class="display-5 fw-bold">Lost. Found. Reconnected.</h1>
-  <p class="lead text-muted">TRACEBACK connects people who lost belongings with the people who found them —
-  with AI matching and human verification before any handover.</p>
-  <div class="d-flex justify-content-center gap-3 mt-4">
-    <a href="/report/lost" class="btn btn-amber btn-lg px-4"><i class="bi bi-search-heart"></i> I lost something</a>
-    <a href="/report/found" class="btn btn-primary btn-lg px-4"><i class="bi bi-hand-thumbs-up"></i> I found something</a>
+{# ------------------------------------------------------------------ hero #}
+<div class="container pt-4">
+  <div class="hero">
+    <span class="badge-soft mb-3"><i class="bi bi-shield-check"></i> Human verification on every handover</span>
+    <h1 class="mb-3">Lost. Found.<br>Reconnected.</h1>
+    <p class="tagline mb-4">TRACEBACK pairs AI matching with human trust. Describe what you lost or found —
+      our engine compares photos, wording, place and time — then a real person verifies every claim before an item changes hands.</p>
+    <div class="actions d-flex gap-3 flex-wrap">
+      <a href="/report/lost" class="btn btn-amber btn-hero"><i class="bi bi-search-heart me-2"></i>I lost something</a>
+      <a href="/report/found" class="btn btn-primary btn-hero"><i class="bi bi-hand-thumbs-up me-2"></i>I found something</a>
+      <a href="/how-it-works" class="btn btn-ghost-light btn-hero">How it works</a>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="num">{{ stats.recovered }}</div><div class="lbl">Items recovered</div></div>
+      <div class="hero-stat"><div class="num">{{ stats.institutions }}</div><div class="lbl">Active institutions</div></div>
+      <div class="hero-stat"><div class="num">{{ stats.reports }}</div><div class="lbl">Reports filed</div></div>
+    </div>
   </div>
 </div>
 
-<div class="row g-3 mt-2">
-  <div class="col-md-4"><div class="card p-3 text-center">
-    <div class="fs-3 fw-bold" style="color:var(--teal)">{{ stats.recovered }}</div>
-    <div class="text-muted">Items recovered</div></div></div>
-  <div class="col-md-4"><div class="card p-3 text-center">
-    <div class="fs-3 fw-bold" style="color:var(--blue)">{{ stats.institutions }}</div>
-    <div class="text-muted">Active institutions</div></div></div>
-  <div class="col-md-4"><div class="card p-3 text-center">
-    <div class="fs-3 fw-bold" style="color:var(--navy)">{{ stats.reports }}</div>
-    <div class="text-muted">Reports filed</div></div></div>
+{# --------------------------------------------------------- how it works #}
+<div class="container section-pad">
+  <div class="text-center mb-4">
+    <div class="section-label">Three steps to reconnect</div>
+    <h2>From "missing" to "mine again"</h2>
+  </div>
+  <div class="row g-4 justify-content-center">
+    <div class="col-md-4">
+      <div class="card card-hover step-card step-1">
+        <div class="step-num">1</div>
+        <div class="step-icon"><i class="bi bi-file-earmark-image"></i></div>
+        <h5>Report it</h5>
+        <p class="text-muted small mb-0">Submit a Lost or Found report with photos, description, date and location —
+          or scan an institution's QR poster to file it exactly where it happened.</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card card-hover step-card step-2">
+        <div class="step-num">2</div>
+        <div class="step-icon"><i class="bi bi-stars"></i></div>
+        <h5>Get matched</h5>
+        <p class="text-muted small mb-0">The engine compares image similarity, wording, distance and timing, and shows
+          a ranked score breakdown — never hidden, always explainable.</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card card-hover step-card step-3">
+        <div class="step-num">3</div>
+        <div class="step-icon"><i class="bi bi-patch-check"></i></div>
+        <h5>Verify &amp; recover</h5>
+        <p class="text-muted small mb-0">The owner submits a claim with details only the true owner would know.
+          A human reviewer approves it, hands the item over, and recovery is confirmed by both sides.</p>
+      </div>
+    </div>
+  </div>
 </div>
 
-<div class="row g-4 mt-3">
-  <div class="col-md-4"><div class="card h-100 p-4"><h5><span class="badge badge-lost">1</span> Report it</h5>
-    <p class="text-muted mb-0">Submit a Lost or Found report with photos, description, date and location.</p></div></div>
-  <div class="col-md-4"><div class="card h-100 p-4"><h5><span class="badge badge-found">2</span> Get matched</h5>
-    <p class="text-muted mb-0">Our engine compares photos, wording, place and time to suggest possible matches.</p></div></div>
-  <div class="col-md-4"><div class="card h-100 p-4"><h5><span class="badge badge-recovered">3</span> Verify &amp; recover</h5>
-    <p class="text-muted mb-0">The owner submits a claim with private details; a human reviewer approves before handover.</p></div></div>
+{# ------------------------------------------------------------- trust row #}
+<div class="container pb-2">
+  <div class="row g-3">
+    <div class="col-md-4"><div class="card card-hover h-100 p-4">
+      <div class="mb-2" style="color:var(--teal);font-size:1.5rem"><i class="bi bi-lock"></i></div>
+      <h5>Private by design</h5>
+      <p class="text-muted small mb-0">Contact details are never shared between users. Private identifying details stay hidden and
+        are only compared during claim review.</p>
+    </div></div>
+    <div class="col-md-4"><div class="card card-hover h-100 p-4">
+      <div class="mb-2" style="color:var(--blue);font-size:1.5rem"><i class="bi bi-people"></i></div>
+      <h5>Institution network</h5>
+      <p class="text-muted small mb-0">Colleges, stations, malls and airports run QR posters so found items land in the
+        right hands — with staff-only review queues.</p>
+    </div></div>
+    <div class="col-md-4"><div class="card card-hover h-100 p-4">
+      <div class="mb-2" style="color:var(--amber);font-size:1.5rem"><i class="bi bi-activity"></i></div>
+      <h5>Transparent scoring</h5>
+      <p class="text-muted small mb-0">Every match shows which signals were used and how strong each one is.
+        A match is a recommendation, never a verdict.</p>
+    </div></div>
+  </div>
 </div>
 
-<h3 class="mt-5">Participating institutions</h3>
-<div class="row g-3">
-  {% for i in institutions %}
-  <div class="col-md-3"><div class="card p-3"><strong>{{ i.name }}</strong>
-    <div class="text-muted small">{{ i.institution_type.value if i.institution_type else '' }}</div></div></div>
-  {% else %}
-  <p class="text-muted">No institutions listed yet.</p>
-  {% endfor %}
+{# ---------------------------------------------------------- institutions #}
+<div class="container section-pad">
+  <div class="d-flex justify-content-between align-items-end mb-3 flex-wrap gap-2">
+    <div>
+      <div class="section-label">Where items find their way home</div>
+      <h2 class="mb-0">Participating institutions</h2>
+    </div>
+    <a class="btn btn-sm btn-outline-primary" href="/institutions">View directory <i class="bi bi-arrow-right"></i></a>
+  </div>
+  <div class="row g-3">
+    {% for i in institutions %}
+    <div class="col-md-4"><div class="card card-hover inst-card p-3 h-100 d-flex flex-row align-items-center gap-3">
+      <div style="width:44px;height:44px;border-radius:12px;background:rgba(29,78,216,.1);color:var(--blue)"
+           class="d-grid place-items-center fs-5"><i class="bi bi-building"></i></div>
+      <div>
+        <div class="card-title-sm">{{ i.name }}</div>
+        <div class="text-muted small">{{ i.institution_type.value.replace('_',' ')|title if i.institution_type else '' }}
+          {% if i.verified %}· <i class="bi bi-patch-check-fill" style="color:var(--teal)"></i> Verified{% endif %}</div>
+      </div>
+    </div></div>
+    {% else %}
+    <div class="col-12">
+      {% from "macros/ui.html" import empty_state %}
+      {{ empty_state('bi-building', 'No institutions yet', 'Admins can add colleges, stations, malls and airports from the admin portal.') }}
+    </div>
+    {% endfor %}
+  </div>
 </div>
 
-<p class="text-muted small mt-5">Privacy note: your contact details and private identifying details are never shown to other users.
-Matches are recommendations, not proof of ownership.</p>
+{# ------------------------------------------------------------------ CTA #}
+<div class="container pb-5">
+  <div class="cta-band text-center">
+    <h2 class="text-white mb-2">Something is waiting to be found.</h2>
+    <p class="mb-4" style="color:#B9CBE4">File a report in under two minutes. Matching starts the moment you hit submit.</p>
+    <div class="d-flex justify-content-center gap-3 flex-wrap">
+      <a href="/report/lost" class="btn btn-amber btn-hero">Report a lost item</a>
+      <a href="/report/found" class="btn btn-light btn-hero">Report a found item</a>
+    </div>
+    <p class="small mt-4 mb-0" style="color:#8FA6C4">
+      <i class="bi bi-shield-check me-1"></i>Your contact details and private details are never shown to other users.</p>
+  </div>
+</div>
 {% endblock %}

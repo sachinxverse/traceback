@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Browse found items</h1>
+<div class="page-head"><div>
+  <div class="section-label" style="color:var(--blue)">Found items</div>
+  <h1>Browse what's been found</h1>
+</div></div>
 <form class="row g-2 mb-4">
   <div class="col-md-5"><input class="form-control" name="q" value="{{ q }}" placeholder="Keyword…"></div>
   <div class="col-md-4"><select class="form-select" name="category">
@@ -22,7 +25,8 @@
     </div>
   </div>
 {% else %}
-  <p class="text-muted">No active found reports match your filters.</p>
+  <div class="col-12"><div class="empty-state"><div class="es-icon"><i class="bi bi-collection"></i></div>
+    <div class="es-title">Nothing matches your filters</div><div class="small">Try a different keyword or category.</div></div></div>
 {% endfor %}
 </div>
 {% endblock %}

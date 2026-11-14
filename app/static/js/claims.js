@@ -2,8 +2,13 @@
 import { apiFetch, showToast, fmtDate } from './api.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-  const matchId = window.location.pathname.startsWith('/matches/')
+  let matchId = window.location.pathname.startsWith('/matches/')
     ? parseInt(location.pathname.split('/')[2], 10) : null;
+  const msgPanel = document.getElementById('messaging-panel');
+  if (!matchId && msgPanel) {
+    const attr = msgPanel.dataset.matchId || msgPanel.getAttribute('data-match-id');
+    if (attr) matchId = parseInt(attr, 10);
+  }
   const claimId = window.location.pathname.startsWith('/claims/')
     ? parseInt(location.pathname.split('/')[2], 10) : null;
 

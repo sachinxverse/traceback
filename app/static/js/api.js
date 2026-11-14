@@ -47,12 +47,13 @@ export async function apiFetch(path, { method = 'GET', body = null, formData = n
 export function showToast(message, kind = 'danger') {
   const area = document.getElementById('toast-area');
   if (!area) return;
+  const icon = kind === 'success' ? 'check-circle' : 'exclamation-triangle';
   const el = document.createElement('div');
   el.className = `toast align-items-center text-bg-${kind} border-0 show mb-2`;
   el.setAttribute('role', 'alert');
-  el.innerHTML = `<div class="d-flex"><div class="toast-body"></div>
+  el.innerHTML = `<div class="d-flex"><div class="toast-body"><i class="bi bi-${icon} me-2"></i><span class="msg"></span></div>
     <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>`;
-  el.querySelector('.toast-body').textContent = message;
+  el.querySelector('.msg').textContent = message;
   area.appendChild(el);
   setTimeout(() => el.remove(), 5000);
 }

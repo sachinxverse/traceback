@@ -1,7 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Report moderation</h1>
-<form class="row g-2 mb-3" id="filter-form">
+<div class="container py-4">
+<div class="page-head"><div>
+  <div class="section-label">Moderation</div>
+  <h1>Report moderation</h1>
+</div>
+<a class="btn btn-sm btn-outline-secondary" href="/admin"><i class="bi bi-speedometer2 me-1"></i>Overview</a></div><form class="row g-2 mb-3" id="filter-form">
   <div class="col-md-3"><input class="form-control" name="q" placeholder="Search…"></div>
   <div class="col-md-2"><select class="form-select" name="status"><option value="">Any status</option>
     {% for s in ['ACTIVE','CLAIM_PENDING','RECOVERED','CLOSED','EXPIRED','REMOVED'] %}<option>{{ s }}</option>{% endfor %}</select></div>
@@ -19,5 +23,6 @@
   <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
   <button class="btn btn-danger" id="reason-confirm">Confirm</button></div>
 </div></div></div>
+</div>
 {% endblock %}
 {% block scripts %}<script type="module" src="/static/js/admin.js"></script>{% endblock %}

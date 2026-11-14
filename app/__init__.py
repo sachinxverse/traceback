@@ -170,11 +170,12 @@ def create_app(config_name=None, **overrides):
         csp = (
             "default-src 'self'; "
             "script-src 'self' https://cdn.jsdelivr.net https://unpkg.com; "
-            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; "
-            "font-src 'self' https://cdn.jsdelivr.net data:; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://fonts.googleapis.com; "
+            "font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com data:; "
             "img-src 'self' data: blob: https://*.tile.openstreetmap.org; "
             "connect-src 'self' https://nominatim.openstreetmap.org; "
             "frame-ancestors 'none'"
+            
         )
         resp.headers.setdefault("Content-Security-Policy", csp)
         resp.headers.setdefault("X-Content-Type-Options", "nosniff")

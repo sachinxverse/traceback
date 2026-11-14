@@ -1,80 +1,116 @@
 {% extends "base.html" %}
+{% from "macros/ui.html" import status_pill, type_badge, score_ring, breakdown_row, confidence_pill, owner_note %}
+{% block title %}Match — TRACEBACK{% endblock %}
 {% block content %}
-<h1>Match comparison</h1>
-<p class="text-muted">Match score ranks likelihood under the configured model. It is not proof of ownership.</p>
+<div class="container py-4">
+  <div class="page-head">
+    <div>
+      <div class="section-label">Match comparison</div>
+      <h1>{{ match.lost_report.title }} <i class="bi bi-arrows-angle-contract mx-1 text-muted"></i> {{ match.found_report.title }}</h1>
+    </div>
+    <a class="btn btn-sm btn-outline-secondary" href="javascript:history.back()"><i class="bi bi-arrow-left me-1"></i>Back</a>
+  </div>
 
-<div class="row g-4">
-  <div class="col-md-6">
-    <div class="card p-3 h-100">
-      <h5><span class="badge badge-lost">LOST</span> {{ match.lost_report.title }}</h5>
-      {% if match.lost_report.images %}<img class="report-img mb-2" src="{{ match.lost_report.images[0].url }}" alt="">{% endif %}
-      <p>{{ match.lost_report.description }}</p>
-      <div class="text-muted small">{{ match.lost_report.incident_date.strftime('%Y-%m-%d') }} · {{ match.lost_report.location_text or '' }}</div>
-      <div class="text-muted small">Reported by {{ match.lost_report.owner.first_name }}</div>
+  <div class="card p-4 mb-4">
+    <div class="row align-items-center g-4">
+      <div class="col-md-3 text-center">
+        {{ score_ring((match.total_score * 100) | round | int, 'lg') }}
+        <div class="mt-2">{{ confidence_pill('HIGH' if match.total_score >= 0.75 else ('MEDIUM' if match.total_score >= 0.55 else 'LOW')) }}</div>
+      </div>
+      <div class="col-md-9">
+        <p class="text-muted small mb-3">The score ranks likelihood under the configured model — it is <strong>not proof of ownership</strong>.
+          Only the signals listed below were used{% if distance %}; the two reports are about <strong>{{ distance }} km</strong> apart{% endif %}.</p>
+        <div class="row g-3">
+          {% for sig in ['image','text','location','time'] %}
+          <div class="col-6 col-md-3">{{ breakdown_row(sig, match.scores_dict()[sig]) }}</div>
+          {% endfor %}
+        </div>
+        <div class="text-muted small mt-2">Signals used: {{ (match.signals_used or []) | join(', ') | default('—') }}</div>
+      </div>
     </div>
   </div>
-  <div class="col-md-6">
-    <div class="card p-3 h-100">
-      <h5><span class="badge badge-found">FOUND</span> {{ match.found_report.title }}</h5>
-      {% if match.found_report.images %}<img class="report-img mb-2" src="{{ match.found_report.images[0].url }}" alt="">{% endif %}
-      <p>{{ match.found_report.description }}</p>
-      <div class="text-muted small">{{ match.found_report.incident_date.strftime('%Y-%m-%d') }} · {{ match.found_report.location_text or '' }}</div>
-      <div class="text-muted small">Found by {{ match.found_report.owner.first_name }}</div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-md-6">
+      <div class="card card-hover h-100 p-0 overflow-hidden">
+        {% if match.lost_report.images %}<img class="report-img" style="max-height:260px" src="{{ match.lost_report.images[0].url }}" alt="">{% endif %}
+        <div class="p-3">
+          <div class="d-flex align-items-center gap-2 mb-2">{{ type_badge('LOST') }}
+            <span class="fw-bold">{{ match.lost_report.title }}</span></div>
+          <p class="small mb-2">{{ match.lost_report.description }}</p>
+          <div class="text-muted small">
+            <i class="bi bi-calendar3 me-1"></i>{{ match.lost_report.incident_date.strftime('%Y-%m-%d') }}
+            · <i class="bi bi-geo-alt me-1"></i>{{ match.lost_report.location_text or '' }}
+            · <i class="bi bi-person me-1"></i>{{ match.lost_report.owner.first_name }}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card card-hover h-100 p-0 overflow-hidden">
+        {% if match.found_report.images %}<img class="report-img" style="max-height:260px" src="{{ match.found_report.images[0].url }}" alt="">{% endif %}
+        <div class="p-3">
+          <div class="d-flex align-items-center gap-2 mb-2">{{ type_badge('FOUND') }}
+            <span class="fw-bold">{{ match.found_report.title }}</span></div>
+          <p class="small mb-2">{{ match.found_report.description }}</p>
+          <div class="text-muted small">
+            <i class="bi bi-calendar3 me-1"></i>{{ match.found_report.incident_date.strftime('%Y-%m-%d') }}
+            · <i class="bi bi-geo-alt me-1"></i>{{ match.found_report.location_text or '' }}
+            · <i class="bi bi-person me-1"></i>{{ match.found_report.owner.first_name }}
+          </div>
+        </div>
+      </div>
     </div>
   </div>
-</div>
 
-<div class="card p-4 my-4">
-  <div class="d-flex align-items-center gap-3">
-    <div class="match-gauge">{{ (match.total_score * 100) | round | int }}%</div>
-    <span class="status-pill status-{{ 'HIGH' if match.total_score >= 0.75 else ('MEDIUM' if match.total_score >= 0.55 else 'LOW') }}">
-      {{ 'HIGH' if match.total_score >= 0.75 else ('MEDIUM' if match.total_score >= 0.55 else 'LOW') }}</span>
-    {% if distance %}<span class="text-muted">{{ distance }} km apart</span>{% endif %}
+  {% if for_lost and not live_claim %}
+  <div class="card split-priv p-4 mb-4">
+    <h5 class="mb-1"><i class="bi bi-clipboard-check me-2" style="color:var(--blue)"></i>This looks like my item</h5>
+    <p class="text-muted small">Provide details only the owner would know. Do not share them publicly.</p>
+    <form id="claim-form">
+      <textarea class="form-control mb-3" name="claim_details" rows="4" required minlength="20" maxlength="1500"
+        placeholder="Serial numbers, scratches, exact contents, lock-screen details, receipts…"></textarea>
+      <div class="mb-3">
+        <label class="form-label small fw-bold">Optional proof photos (up to 2)</label>
+        <input type="file" id="proof_images" accept=".jpg,.jpeg,.png,.webp" multiple class="form-control">
+      </div>
+      <button class="btn btn-primary" type="submit"><i class="bi bi-send me-1"></i>Submit claim</button>
+    </form>
   </div>
-  <div class="row g-3 mt-2">
-    {% for sig in ['image','text','location','time'] %}
-    <div class="col-md-3">
-      <div class="d-flex justify-content-between"><small>{{ sig|capitalize }}</small>
-        <small>{{ (match.scores_dict()[sig] if match.scores_dict()[sig] is not none else '—') }}</small></div>
-      <div class="breakdown-bar"><span style="width: {{ (match.scores_dict()[sig] or 0) }}%"></span></div>
+  {% elif for_lost and live_claim %}
+  <div class="card p-4 mb-4 d-flex flex-row align-items-center gap-3 flex-wrap">
+    <div style="width:46px;height:46px;border-radius:12px;background:rgba(13,148,136,.12);color:var(--teal)"
+         class="d-grid fs-4"><i class="bi bi-clipboard-check"></i></div>
+    <div class="flex-grow-1">
+      <div class="fw-bold">Your claim is {{ live_claim.verification_status.value|lower }}</div>
+      <div class="text-muted small">{% if live_claim.verification_status.value == 'PENDING' %}The reviewer is checking it now.
+        {% elif live_claim.verification_status.value == 'APPROVED' %}Approved — use the messaging panel below to arrange handover.
+        {% else %}Awaiting resolution.{% endif %}</div>
     </div>
-    {% endfor %}
+    <a class="btn btn-sm btn-outline-primary" href="/claims/{{ live_claim.id }}">Open claim <i class="bi bi-arrow-right"></i></a>
   </div>
-</div>
-
-{% if for_lost and live_claim %}
-  {% if live_claim.verification_status.value == 'PENDING' %}
-    <div class="alert alert-warning">Your claim is awaiting review.</div>
-  {% elif live_claim.verification_status.value == 'APPROVED' %}
-    <div class="alert alert-teal alert-info">Claim approved — use the messaging panel to arrange handover.</div>
   {% endif %}
-{% elif for_lost and not live_claim %}
-<div class="card p-4 mb-4">
-  <h5>This looks like my item — claim it</h5>
-  <p class="text-muted small">Provide details only the owner would know. Do not share them publicly.</p>
-  <form id="claim-form">
-    <textarea class="form-control mb-3" name="claim_details" rows="4" required minlength="20" maxlength="1500"
-      placeholder="Serial numbers, scratches, contents, lock-screen details, receipts…"></textarea>
-    <input type="file" id="proof_images" accept=".jpg,.jpeg,.png,.webp" multiple class="form-control mb-3">
-    <button class="btn btn-primary" type="submit">Submit claim</button>
-  </form>
-</div>
-{% endif %}
 
-{% if live_claim or (not for_lost and match.status.value in ('CLAIMED','CONFIRMED')) %}
-<div class="card p-4 mb-4" id="messaging-panel">
-  <h5>Case messaging</h5>
-  <div id="messages" class="mb-2" style="max-height:320px;overflow-y:auto"></div>
-  <form id="message-form" class="input-group">
-    <input class="form-control" id="message-input" maxlength="1000" placeholder="Type a message…">
-    <button class="btn btn-primary" type="submit">Send</button>
-  </form>
-  <div id="contact-warning" class="alert alert-warning py-1 px-2 mt-2 d-none small">
-    Heads up: this looks like a phone number or email. Sharing contact info here is not needed — keep it in-app.</div>
-</div>
-{% endif %}
+  {% if live_claim or (not for_lost and match.status.value in ('CLAIMED','CONFIRMED')) %}
+  <div class="card p-4 mb-4" id="messaging-panel" data-match-id="{{ match.id }}">
+    <div class="d-flex align-items-center gap-2 mb-2">
+      <h5 class="mb-0"><i class="bi bi-chat-dots me-2" style="color:var(--blue)"></i>Case messaging</h5>
+      <span class="text-muted small ms-auto"><span class="live-dot"></span> live — polls every 10 s</span>
+    </div>
+    <div id="messages" class="chat-panel mb-3 d-flex flex-column"></div>
+    <form id="message-form" class="input-group">
+      <input class="form-control" id="message-input" maxlength="1000" placeholder="Type a message…" autocomplete="off">
+      <button class="btn btn-primary" type="submit"><i class="bi bi-send"></i></button>
+    </form>
+    <div id="contact-warning" class="alert alert-warning py-1 px-2 mt-2 d-none small">
+      <i class="bi bi-exclamation-triangle me-1"></i>This looks like a phone number or email. Sharing contact info here is not needed — keep it in-app.</div>
+  </div>
+  {% endif %}
 
-<div id="match-map" class="mb-4"></div>
+  {% set lr, fr = match.lost_report, match.found_report %}
+  <div id="match-map" data-lost-lat="{{ lr.latitude or '' }}" data-lost-lng="{{ lr.longitude or '' }}"
+       data-found-lat="{{ fr.latitude or '' }}" data-found-lng="{{ fr.longitude or '' }}"></div>
+</div>
 {% endblock %}
 {% block scripts %}
 <script type="module" src="/static/js/claims.js"></script>

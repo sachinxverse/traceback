@@ -1,7 +1,18 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Admin portal</h1>
-<p class="text-muted small">Impact metrics should be validated with pilot data.</p>
+<div class="container py-4">
+<div class="page-head"><div>
+  <div class="section-label">Command centre</div>
+  <h1>Admin portal</h1>
+  <p class="text-muted small mb-0">Impact metrics should be validated with pilot data.</p>
+</div>
+<div class="d-flex gap-2 flex-wrap">
+  <a class="btn btn-sm btn-outline-secondary" href="/admin/reports"><i class="bi bi-collection me-1"></i>Reports</a>
+  <a class="btn btn-sm btn-outline-secondary" href="/admin/claims"><i class="bi bi-clipboard-check me-1"></i>Claims</a>
+  <a class="btn btn-sm btn-outline-secondary" href="/admin/users"><i class="bi bi-people me-1"></i>Users</a>
+  <a class="btn btn-sm btn-outline-secondary" href="/admin/institutions"><i class="bi bi-building me-1"></i>Institutions</a>
+  <a class="btn btn-sm btn-outline-secondary" href="/admin/audit"><i class="bi bi-journal-text me-1"></i>Audit log</a>
+</div></div>
 <div class="row g-3 mb-4" id="kpi-cards"></div>
 <div class="row g-4">
   <div class="col-lg-6"><div class="card p-3"><h5>Reports per day (lost vs found)</h5><canvas id="timeseries-chart"></canvas></div></div>
@@ -15,6 +26,7 @@
   </div>
   <div id="admin-heatmap"></div>
   <div class="text-muted small mt-2">Cells with fewer than 2 reports are hidden for privacy.</div>
+</div>
 </div>
 {% endblock %}
 {% block scripts %}<script type="module" src="/static/js/admin.js"></script>{% endblock %}

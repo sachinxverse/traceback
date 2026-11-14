@@ -1,12 +1,17 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Claims</h1>
-<ul class="nav nav-tabs mb-3">
+<div class="container py-4">
+<div class="page-head"><div>
+  <div class="section-label">Oversight</div>
+  <h1>Claims</h1>
+</div>
+<a class="btn btn-sm btn-outline-secondary" href="/admin"><i class="bi bi-speedometer2 me-1"></i>Overview</a></div><ul class="nav nav-tabs mb-3">
   {% for s in ['All','PENDING','DISPUTED'] %}
   <li class="nav-item"><a class="nav-link {{ 'active' if loop.first }}" href="#" data-status="{{ s.lower() }}">{{ s }}</a></li>
   {% endfor %}
 </ul>
 <table class="table" id="claims-table"><thead>
   <tr><th>ID</th><th>Item</th><th>Status</th><th>Claimant</th><th></th></tr></thead><tbody></tbody></table>
+</div>
 {% endblock %}
 {% block scripts %}<script type="module" src="/static/js/admin.js"></script>{% endblock %}

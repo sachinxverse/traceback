@@ -1,8 +1,13 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Recovery records</h1>
-<table class="table" id="recoveries-table"><thead>
+<div class="container py-4">
+<div class="page-head"><div>
+  <div class="section-label">Impact</div>
+  <h1>Recovery records</h1>
+</div>
+<a class="btn btn-sm btn-outline-secondary" href="/admin"><i class="bi bi-speedometer2 me-1"></i>Overview</a></div><table class="table" id="recoveries-table"><thead>
   <tr><th>Claim</th><th>Lost item</th><th>Created</th><th>Handed over</th><th>Confirmed</th><th>Hours</th></tr>
 </thead><tbody></tbody></table>
+</div>
 {% endblock %}
 {% block scripts %}<script type="module" src="/static/js/admin.js"></script>{% endblock %}
