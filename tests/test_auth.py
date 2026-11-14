@@ -87,3 +87,51 @@ def test_csrf_required_on_state_change(client, db):
     from flask.testing import FlaskClient
     resp = FlaskClient.open(client, "/api/v1/auth/logout", method="POST", json={})
     assert resp.status_code in (400, 401, 403)
+
+
+def test_logout_without_csrf_header_never_succeeds(client, app, db):
+    """Regression: a body-less POST with no CSRF header (the old browser bug)
+    must NOT log the user out."""
+    from flask.testing import FlaskClient
+    register(client, "csrflogout@test.com")
+    login(client, "csrflogout@test.com")
+    # plain request without the CSRF header, like the buggy apiFetch did
+    resp = FlaskClient.open(client, "/api/v1/auth/logout", method="POST")
+    assert resp.status_code in (400, 401, 403)
+    # the session survives: /me still works (plain GET carries cookies)
+    r = client.get("/api/v1/auth/me")
+    assert r.status_code == 200
+
+
+def test_logout_with_expired_access_token_revokes_refresh(client, app, db):
+    """Regression: after the 30-min access token expires, logout must still
+    succeed via the refresh-token path and revoke the refresh token."""
+    from datetime import timedelta
+    from flask_jwt_extended import create_access_token
+    from app.models import User
+
+    register(client, "expired@test.com")
+    login(client, "expired@test.com")
+    refresh_cookie = client.get_cookie("refresh_token_cookie")
+    refresh_csrf = client.get_cookie("csrf_refresh_token").value
+    assert refresh_cookie is not None
+
+    # forge an expired access token (fresh csrf claim -> mismatched header too)
+    with app.app_context():
+        user = db.session.query(User).filter_by(email="expired@test.com").one()
+        expired = create_access_token(
+            identity=str(user.id), expires_delta=timedelta(seconds=-1))
+    client.set_cookie("access_token_cookie", expired)
+    # the browser sends exactly ONE csrf header; drop the stale access one
+    client.delete_cookie("csrf_access_token")
+
+    # logout with the refresh CSRF header (what the fixed frontend does)
+    r = client.post("/api/v1/auth/logout", headers=[("X-CSRF-TOKEN", refresh_csrf)])
+    assert r.status_code == 200, r.get_data(as_text=True)
+
+    # the old refresh token must now be revoked
+    client.delete_cookie("refresh_token_cookie")
+    client.set_cookie("refresh_token_cookie", refresh_cookie.value)
+    r = client.post("/api/v1/auth/refresh", headers=[("X-CSRF-TOKEN", refresh_csrf)])
+    assert r.status_code == 401
+    assert r.get_json()["error"]["code"] == "TOKEN_REVOKED"

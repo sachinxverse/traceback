@@ -1,8 +1,9 @@
 // Shared fetch wrapper for the JSON REST API (Section 11.2).
 const API = '/api/v1';
 
-function csrfToken() {
-  const m = document.cookie.match(/(?:^|;\s*)csrf_access_token=([^;]+)/);
+// Read a CSRF cookie. kind: 'access' | 'refresh'.
+function csrfToken(kind = 'access') {
+  const m = document.cookie.match(new RegExp('(?:^|;\\s*)csrf_' + kind + '_token=([^;]+)'));
   return m ? decodeURIComponent(m[1]) : '';
 }
 
@@ -15,13 +16,19 @@ class ApiError extends Error {
   }
 }
 
-export async function apiFetch(path, { method = 'GET', body = null, formData = null, retry = true } = {}) {
+export async function apiFetch(path, { method = 'GET', body = null, formData = null,
+                                       csrfKind = 'access', retry = true } = {}) {
+  method = method.toUpperCase();
   const headers = {};
+  // Attach the CSRF double-submit header on every state-changing request,
+  // including body-less POSTs such as logout (this was the logout bug).
+  if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+    headers['X-CSRF-TOKEN'] = csrfToken(csrfKind);
+  }
   if (formData) {
-    headers['X-CSRF-TOKEN'] = csrfToken();
+    // Content-Type is set by the browser for FormData
   } else if (body !== null) {
     headers['Content-Type'] = 'application/json';
-    headers['X-CSRF-TOKEN'] = csrfToken();
   }
   const resp = await fetch(API + path, {
     method,
@@ -34,14 +41,24 @@ export async function apiFetch(path, { method = 'GET', body = null, formData = n
   if (resp.ok) return payload.data !== undefined ? payload.data : payload;
 
   const err = payload.error || { code: 'ERROR', message: 'Request failed' };
+  // Access token expired: transparently refresh and retry once.
   if (err.code === 'TOKEN_EXPIRED' && retry) {
-    const r = await fetch(API + '/auth/refresh', {
-      method: 'POST', credentials: 'same-origin',
-      headers: { 'X-CSRF-TOKEN': document.cookie.match(/(?:^|;\s*)csrf_refresh_token=([^;]+)/) ? decodeURIComponent(RegExp.$1) : '' },
-    });
-    if (r.ok) return apiFetch(path, { method, body, formData, retry: false });
+    const refreshed = await refreshSession();
+    if (refreshed) return apiFetch(path, { method, body, formData, csrfKind, retry: false });
   }
   throw new ApiError(err.code, err.message, resp.status, err.details);
+}
+
+// Silent refresh using the refresh-token CSRF cookie.
+export async function refreshSession() {
+  const token = csrfToken('refresh');
+  if (!token) return false;
+  const r = await fetch(API + '/auth/refresh', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'X-CSRF-TOKEN': token },
+  });
+  return r.ok;
 }
 
 export function showToast(message, kind = 'danger') {

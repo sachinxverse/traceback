@@ -68,7 +68,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const logoutBtn = document.getElementById('logout-btn');
   if (logoutBtn) logoutBtn.addEventListener('click', async () => {
-    try { await apiFetch('/auth/logout', { method: 'POST' }); } catch (e) {}
+    // Try the access-token path first; if the access token is expired or
+    // already revoked, retry with the refresh-token CSRF header so the
+    // server revokes the refresh token too. Cookies are then cleared.
+    try {
+      await apiFetch('/auth/logout', { method: 'POST' });
+    } catch (e) {
+      try { await apiFetch('/auth/logout', { method: 'POST', csrfKind: 'refresh' }); } catch (e2) { /* both failed */ }
+    }
     window.location.href = '/';
   });
 
