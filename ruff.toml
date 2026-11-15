@@ -1,0 +1,2 @@
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["RUF059", "SIM115", "S110", "BLE001", "PLW1510", "B023", "RUF015", "B035"]
