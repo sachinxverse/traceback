@@ -1,2 +1,7 @@
-[tool.ruff.lint.per-file-ignores]
+# Intentional allowances in test code only:
+# - RUF059: unpacked tuple ids commonly unused per test
+# - SIM115: reading fixture/config files inline is fine in tests
+# - S110/BLE001: optional-dependency guards swallow broadly by design
+# - PLW1510/B023/RUF015/B035: shell/subprocess idioms in integration tests
+[lint.per-file-ignores]
 "tests/*" = ["RUF059", "SIM115", "S110", "BLE001", "PLW1510", "B023", "RUF015", "B035"]
