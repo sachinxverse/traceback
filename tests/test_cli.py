@@ -1,8 +1,7 @@
 """CLI tests (Section 15.3)."""
-import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from tests.conftest import auth, image_file
+from tests.conftest import auth
 
 
 def test_seed_demo_idempotent(app, client):
@@ -17,7 +16,6 @@ def test_seed_demo_idempotent(app, client):
 def test_create_admin_command(app, runner=None):
     from click.testing import CliRunner
     runner = CliRunner()
-    from app.cli import register as register_cli
     # commands are registered on the app; invoke via app.cli
     result = runner.invoke(
         app.cli.commands["create-admin"],
@@ -37,7 +35,7 @@ def test_expire_reports(app, db):
     r = client.post("/api/v1/reports", data={
         "report_type": "LOST", "category": "KEYS", "title": "Old keys",
         "description": "A report that will be expired by the CLI command.",
-        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S")},
+        "incident_date": datetime.now(UTC).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S")},
         content_type="multipart/form-data")
     rid = r.get_json()["data"]["id"]
     rep = db.session.get(Report, rid)

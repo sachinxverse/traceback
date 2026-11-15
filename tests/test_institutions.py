@@ -1,11 +1,11 @@
 """Institution tests (F11, Section 13, acceptance A9, A10)."""
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from tests.conftest import auth, login, make_institution, make_staff
 
 
 def test_admin_institution_crud_and_slug(client, db):
-    from tests.conftest import register, login
+    from tests.conftest import login
     auth(client, "admin@t.com", "Admin", "Password1")
     from app.models import User
     from app.models.enums import Role
@@ -55,6 +55,7 @@ def test_qr_png_download(client, db):
     assert r.data[:8] == b"\x89PNG\r\n\x1a\n"  # valid PNG header
     # QR decodes to BASE_URL/i/slug
     import io
+
     from PIL import Image
     img = Image.open(io.BytesIO(r.data))
     try:
@@ -82,7 +83,7 @@ def test_staff_sees_only_own_institution(client, db):
     r = client.post("/api/v1/reports", data={
         "report_type": "FOUND", "category": "BAGS", "title": "Found bag",
         "description": "A bag was found on the premises of institution B.",
-        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": datetime.now(UTC).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
         "institution_id": str(inst2.id), "custody": "AT_INSTITUTION"},
         content_type="multipart/form-data")
     rid = r.get_json()["data"]["id"]

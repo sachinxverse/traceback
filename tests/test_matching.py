@@ -1,13 +1,14 @@
 """Matching engine tests (F4, F5, Section 9, acceptance A3-A5)."""
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
-from tests.conftest import auth, register, login, image_file
+from tests.conftest import auth, login
 
 
 def _patterned_png(colour, name, size=(220, 180)):
     """Image dominated by the given colour (small white mark in a corner) so
     the stub embedder distinguishes different colours by direction."""
     import io
+
     from PIL import Image, ImageDraw
     from werkzeug.datastructures import FileStorage
     img = Image.new("RGB", size, colour)
@@ -24,7 +25,7 @@ def _submit(client, report_type, title, desc, days_ago, images_spec,
     data = {
         "report_type": report_type, "category": category,
         "title": title, "description": desc,
-        "incident_date": (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days_ago)).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": (datetime.now(UTC).replace(tzinfo=None) - timedelta(days=days_ago)).strftime("%Y-%m-%dT%H:%M:%S"),
     }
     if lat is not None:
         data["latitude"] = str(lat)
@@ -35,12 +36,13 @@ def _submit(client, report_type, title, desc, days_ago, images_spec,
         data["institution_id"] = str(inst)
     payload = {**data}
     for i, (colour, name) in enumerate(images_spec):
-        payload[f"images"] = _patterned_png(colour, name)
+        payload["images"] = _patterned_png(colour, name)
     return client.post("/api/v1/reports", data=payload, content_type="multipart/form-data")
 
 
 def _red_png(name):
     import io
+
     from PIL import Image
     from werkzeug.datastructures import FileStorage
     buf = io.BytesIO()
@@ -86,7 +88,7 @@ def test_match_flow_found_first(client, app):
     r = _submit(client, "FOUND", "Wallet found on bench",
                 "A brown leather wallet was found on a bench and deposited at the desk.",
                 1, [((120, 70, 20), "f.png")], custody="WITH_FINDER")
-    found = r.get_json()["data"]
+    r.get_json()["data"]
     client.post("/api/v1/auth/logout")
 
     auth(client, "u2@test.com", "User2")
@@ -218,7 +220,7 @@ def test_no_duplicate_matches_on_rerun(client, app, db):
     from app.services.jobs import process_report
     with app.app_context():
         from app.models import Report
-        report = db.session.get(Report, lost_id)
+        db.session.get(Report, lost_id)
         process_report(lost_id)
         count = Match.query.filter_by(lost_report_id=lost_id,
                                       found_report_id=found_id).count()
@@ -241,7 +243,7 @@ def test_scores_update_when_report_edited(client, app, db):
                 "An orange baseball cap was found at the pool side.", 1,
                 [((240, 140, 30), "f.png")], custody="WITH_FINDER")
     found_id = r.get_json()["data"]["id"]
-    from app.models import Match, Report
+    from app.models import Match
     with app.app_context():
         m = Match.query.filter_by(lost_report_id=lost_id, found_report_id=found_id).first()
         before = m.total_score

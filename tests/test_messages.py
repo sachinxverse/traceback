@@ -1,11 +1,12 @@
 """Messaging tests (F9, Section 10.4)."""
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
-from tests.conftest import auth, login, CsrfClient
+from tests.conftest import CsrfClient, auth, login
 
 
 def _img(colour):
     import io
+
     from PIL import Image
     from werkzeug.datastructures import FileStorage
     buf = io.BytesIO()
@@ -19,7 +20,7 @@ def _setup_with_claim(client):
     r = client.post("/api/v1/reports", data={
         "report_type": "LOST", "category": "WALLETS_CARDS", "title": "Lost wallet",
         "description": "Lost my wallet near the cafe with a zip pocket.",
-        "incident_date": (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": (datetime.now(UTC).replace(tzinfo=None) - timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%S"),
         "images": _img((120, 70, 20))}, content_type="multipart/form-data")
     lost_id = r.get_json()["data"]["id"]
     client.post("/api/v1/auth/logout")
@@ -27,7 +28,7 @@ def _setup_with_claim(client):
     r = client.post("/api/v1/reports", data={
         "report_type": "FOUND", "category": "WALLETS_CARDS", "title": "Wallet found",
         "description": "A wallet with a zip pocket was found near the cafe area.",
-        "incident_date": (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": (datetime.now(UTC).replace(tzinfo=None) - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%S"),
         "custody": "WITH_FINDER", "images": _img((125, 75, 25))},
         content_type="multipart/form-data")
     found_id = r.get_json()["data"]["id"]
@@ -89,8 +90,8 @@ def test_message_escaping_and_length(client, db):
 
 
 def test_message_rate_limit(app, db):
-    from app import create_app
     import app.services.storage as storage_mod
+    from app import create_app
     from app.services.embeddings import reset_embedder
     reset_embedder()
     storage_mod.reset_storage()
@@ -104,15 +105,15 @@ def test_message_rate_limit(app, db):
     r = client2.post("/api/v1/reports", data={
         "report_type": "LOST", "category": "WALLETS_CARDS", "title": "Lost wallet rl",
         "description": "Lost my wallet near the cafe with a zip pocket here.",
-        "incident_date": (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": (datetime.now(UTC).replace(tzinfo=None) - timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%S"),
         "images": _img((120, 70, 20))}, content_type="multipart/form-data")
-    lost_id = r.get_json()["data"]["id"]
+    r.get_json()["data"]["id"]
     client2.post("/api/v1/auth/logout")
     auth(client2, "rl-finder@test.com", "Finder")
     r = client2.post("/api/v1/reports", data={
         "report_type": "FOUND", "category": "WALLETS_CARDS", "title": "Wallet found rl",
         "description": "A wallet with a zip pocket was found near the cafe area.",
-        "incident_date": (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": (datetime.now(UTC).replace(tzinfo=None) - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%S"),
         "custody": "WITH_FINDER", "images": _img((125, 75, 25))},
         content_type="multipart/form-data")
     found_id = r.get_json()["data"]["id"]

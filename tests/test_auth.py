@@ -1,5 +1,5 @@
 """Auth tests (F1, Section 7.3)."""
-from tests.conftest import register, login, auth
+from tests.conftest import login, register
 
 
 def test_register_login_logout_cycle(client, db):
@@ -107,7 +107,9 @@ def test_logout_with_expired_access_token_revokes_refresh(client, app, db):
     """Regression: after the 30-min access token expires, logout must still
     succeed via the refresh-token path and revoke the refresh token."""
     from datetime import timedelta
+
     from flask_jwt_extended import create_access_token
+
     from app.models import User
 
     register(client, "expired@test.com")

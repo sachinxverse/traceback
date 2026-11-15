@@ -14,7 +14,7 @@ import time
 import pytest
 
 pw = pytest.importorskip("playwright.sync_api")
-from playwright.sync_api import expect, sync_playwright  # noqa: E402
+from playwright.sync_api import sync_playwright
 
 
 def _free_port():
@@ -27,8 +27,8 @@ def _free_port():
 def live_server(tmp_path_factory):
     from app import create_app
     from app.extensions import db as _db
-    from app.services.embeddings import reset_embedder
     from app.services import storage as storage_mod
+    from app.services.embeddings import reset_embedder
 
     reset_embedder()
     storage_mod.reset_storage()

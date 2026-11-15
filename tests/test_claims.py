@@ -1,8 +1,7 @@
 """Claim workflow tests (F7, F8, Section 10, acceptance A6, A7)."""
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
-import pytest
-from tests.conftest import auth, login, register
+from tests.conftest import auth, login
 
 
 def _setup_pair(client, app):
@@ -12,7 +11,7 @@ def _setup_pair(client, app):
         "report_type": "LOST", "category": "WALLETS_CARDS",
         "title": "Lost brown wallet",
         "description": "Lost my brown wallet near the fountain with cards inside.",
-        "incident_date": (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": (datetime.now(UTC).replace(tzinfo=None) - timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%S"),
         "private_details": "Initials J.K., blue card holder inside",
         "images": _img((120, 70, 20))},
         content_type="multipart/form-data")
@@ -24,7 +23,7 @@ def _setup_pair(client, app):
         "report_type": "FOUND", "category": "WALLETS_CARDS",
         "title": "Brown wallet found",
         "description": "A brown leather wallet was found near the fountain area.",
-        "incident_date": (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": (datetime.now(UTC).replace(tzinfo=None) - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%S"),
         "private_details": "Brown wallet with initials inside",
         "custody": "WITH_FINDER",
         "images": _img((125, 75, 25))},
@@ -37,6 +36,7 @@ def _setup_pair(client, app):
 
 def _img(colour):
     import io
+
     from PIL import Image
     from werkzeug.datastructures import FileStorage
     buf = io.BytesIO()
@@ -82,7 +82,7 @@ def test_full_happy_path_to_completed(client, app, db):
     assert r.get_json()["data"]["status"] == "COMPLETED"
 
     # both reports RECOVERED, match CONFIRMED
-    from app.models import Report, Match
+    from app.models import Match, Report
     with app.app_context():
         assert db.session.get(Report, lost_id).status.value == "RECOVERED"
         assert db.session.get(Report, found_id).status.value == "RECOVERED"
@@ -175,8 +175,9 @@ def test_illegal_transitions_409(client, app):
 
 def test_reviewer_rule_by_custody(client, app, db):
     """AT_INSTITUTION custody: only institution staff can review, not the finder."""
-    from tests.conftest import make_institution, make_staff
     from datetime import datetime
+
+    from tests.conftest import make_institution, make_staff
     inst = make_institution(db, name="Review Inst")
     make_staff(db, "staff@r.com", inst.id)
 
@@ -184,16 +185,15 @@ def test_reviewer_rule_by_custody(client, app, db):
     r = client.post("/api/v1/reports", data={
         "report_type": "LOST", "category": "KEYS", "title": "Lost keys",
         "description": "Lost my keys with a blue keychain near the gate.",
-        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": datetime.now(UTC).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
         "images": _img((30, 30, 220))}, content_type="multipart/form-data")
-    lost_id = r.get_json()["data"]["id"]
     client.post("/api/v1/auth/logout")
 
     auth(client, "finder2@test.com", "Finder2")
     r = client.post("/api/v1/reports", data={
         "report_type": "FOUND", "category": "KEYS", "title": "Keys found",
         "description": "Found keys with a blue keychain near the main gate.",
-        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": datetime.now(UTC).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
         "institution_id": str(inst.id), "custody": "AT_INSTITUTION",
         "images": _img((35, 35, 225))}, content_type="multipart/form-data")
     found_id = r.get_json()["data"]["id"]
@@ -219,7 +219,6 @@ def test_reviewer_rule_by_custody(client, app, db):
 
 def test_other_claims_auto_rejected_on_completion(client, app, db):
     """A6: completing one claim auto-rejects other live claims on the same found item."""
-    from tests.conftest import register as _reg
     lost_id, found_id, match_id = _setup_pair(client, app)
 
     # second lost owner also gets matched? Use a second match from another user
@@ -228,7 +227,7 @@ def test_other_claims_auto_rejected_on_completion(client, app, db):
         "report_type": "LOST", "category": "WALLETS_CARDS",
         "title": "Lost brown wallet today",
         "description": "I misplaced my brown wallet by the fountain this morning.",
-        "incident_date": (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": (datetime.now(UTC).replace(tzinfo=None) - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%S"),
         "images": _img((121, 71, 21))}, content_type="multipart/form-data")
     lost3 = r.get_json()["data"]
     r = client.get(f"/api/v1/reports/{lost3['id']}/matches")

@@ -1,7 +1,7 @@
 """Admin + analytics tests (F12, F13, Section 14, acceptance A11)."""
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime
 
-from tests.conftest import auth, login, make_institution, make_staff
+from tests.conftest import auth, login, make_institution
 
 
 def make_admin(db, email="adm@test.com"):
@@ -35,7 +35,7 @@ def test_admin_user_patch_audited(client, db):
     from app.models import AuditLog
     auth(client, "a1@x.com", "A1")
     auth(client, "target@x.com", "Target")
-    admin = make_admin(db, "a1@x.com")
+    make_admin(db, "a1@x.com")
     from app.models import User
     target = db.session.query(User).filter_by(email="target@x.com").one()
     client.post("/api/v1/auth/logout")
@@ -54,7 +54,7 @@ def test_summary_on_seeded_like_data(client, app, db):
             "report_type": "LOST" if i % 2 == 0 else "FOUND",
             "category": "KEYS", "title": f"Keys report {i}",
             "description": f"Description of keys report number {i} for testing.",
-            "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
+            "incident_date": datetime.now(UTC).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
             "institution_id": str(inst.id),
             **({"custody": "AT_INSTITUTION"} if i % 2 else {})},
             content_type="multipart/form-data")
@@ -85,7 +85,7 @@ def test_heatmap_privacy_threshold(client, app, db):
     client.post("/api/v1/reports", data={
         "report_type": "LOST", "category": "KEYS", "title": "Lonely keys",
         "description": "One single report at a unique location for privacy.",
-        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": datetime.now(UTC).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
         "latitude": "55.5", "longitude": "55.5"},
         content_type="multipart/form-data")
     login(client, "hm@x.com")
@@ -100,7 +100,7 @@ def test_report_moderation_remove_restore(client, app, db):
     r = client.post("/api/v1/reports", data={
         "report_type": "LOST", "category": "KEYS", "title": "To remove",
         "description": "This report will be removed by the moderator soon.",
-        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S")},
+        "incident_date": datetime.now(UTC).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S")},
         content_type="multipart/form-data")
     rid = r.get_json()["data"]["id"]
     client.post("/api/v1/auth/logout")
@@ -117,7 +117,7 @@ def test_report_moderation_remove_restore(client, app, db):
 def test_audit_log_filters(client, app, db):
     make_admin(db, "aud@x.com")
     auth(client, "actor@x.com", "Actor")
-    admin = make_admin(db, "aud@x.com")
+    make_admin(db, "aud@x.com")
     from app.models import User
     from app.services.audit import log_action
     actor = db.session.query(User).filter_by(email="actor@x.com").one()

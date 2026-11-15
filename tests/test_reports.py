@@ -1,9 +1,10 @@
 """Report + image tests (F2, F3)."""
 import io
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from PIL import Image
-from tests.conftest import register, login, auth, image_file, make_png
+
+from tests.conftest import auth, image_file
 
 
 def _auth_client(client):
@@ -16,7 +17,7 @@ def test_create_lost_report(client, db):
     r = client.post("/api/v1/reports", data={
         "report_type": "LOST", "category": "KEYS",
         "title": "Lost my keys", "description": "A bunch of keys lost near the library entrance.",
-        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": datetime.now(UTC).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
     }, content_type="multipart/form-data")
     assert r.status_code == 201, r.get_data(as_text=True)
     assert r.get_json()["data"]["status"] == "ACTIVE"
@@ -27,7 +28,7 @@ def test_create_found_requires_custody(client, db):
     r = client.post("/api/v1/reports", data={
         "report_type": "FOUND", "category": "KEYS",
         "title": "Found keys", "description": "A bunch of keys found near the library entrance.",
-        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": datetime.now(UTC).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
     }, content_type="multipart/form-data")
     assert r.status_code == 400
 
@@ -37,7 +38,7 @@ def test_future_date_rejected(client, db):
     r = client.post("/api/v1/reports", data={
         "report_type": "LOST", "category": "KEYS",
         "title": "Lost my keys", "description": "A bunch of keys lost near the library entrance.",
-        "incident_date": (datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": (datetime.now(UTC).replace(tzinfo=None) + timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%S"),
     }, content_type="multipart/form-data")
     assert r.status_code == 400
 
@@ -46,7 +47,7 @@ def test_unknown_field_rejected(client, db):
     _auth_client(client)
     r = client.post("/api/v1/reports", json={
         "report_type": "LOST", "category": "KEYS", "title": "x", "description": "y",
-        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": datetime.now(UTC).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
         "evil_field": "1"})
     assert r.status_code == 400
 
@@ -59,7 +60,7 @@ def test_bad_image_type_rejected(client, db):
     r = client.post("/api/v1/reports", data={
         "report_type": "LOST", "category": "KEYS",
         "title": "Lost keys", "description": "Keys lost near the library.",
-        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": datetime.now(UTC).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
         "images": bad}, content_type="multipart/form-data")
     assert r.status_code == 400
 
@@ -74,7 +75,7 @@ def test_oversize_image_rejected(app, client, db):
     r = client.post("/api/v1/reports", data={
         "report_type": "LOST", "category": "KEYS",
         "title": "Lost keys", "description": "Keys lost near the library.",
-        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": datetime.now(UTC).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
         "images": fs}, content_type="multipart/form-data")
     assert r.status_code == 400
 
@@ -92,7 +93,7 @@ def test_exif_stripped_and_resized(client, db):
     r = client.post("/api/v1/reports", data={
         "report_type": "LOST", "category": "BAGS",
         "title": "Lost bag", "description": "A brown leather bag lost in the cafeteria.",
-        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": datetime.now(UTC).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
         "images": fs}, content_type="multipart/form-data")
     assert r.status_code == 201
     data = r.get_json()["data"]
@@ -112,7 +113,7 @@ def test_max_four_images(client, db):
     r = client.post("/api/v1/reports", data={
         "report_type": "LOST", "category": "BAGS",
         "title": "Lost bag", "description": "A brown leather bag lost in the cafeteria.",
-        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": datetime.now(UTC).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
         **{f"images{i}": image_file((i * 40, 30, 30)) for i in range(5)},
         "images": image_file()}, content_type="multipart/form-data")
     # 6 image fields -> the API counts files under "images"; with mixed names
@@ -121,7 +122,7 @@ def test_max_four_images(client, db):
     r = client.post("/api/v1/reports", data={
         "report_type": "LOST", "category": "BAGS",
         "title": "Lost bag", "description": "A brown leather bag lost in the cafeteria.",
-        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": datetime.now(UTC).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
         "images": files},
         content_type="multipart/form-data")
     assert r.status_code == 400
@@ -132,7 +133,7 @@ def test_owner_only_edit(client, db):
     r = client.post("/api/v1/reports", data={
         "report_type": "LOST", "category": "BAGS",
         "title": "Lost bag", "description": "A brown leather bag lost in the cafeteria.",
-        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S")},
+        "incident_date": datetime.now(UTC).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S")},
         content_type="multipart/form-data")
     report_id = r.get_json()["data"]["id"]
 
@@ -150,7 +151,7 @@ def test_edit_requeues_processing(client, db):
     r = client.post("/api/v1/reports", data={
         "report_type": "LOST", "category": "BAGS",
         "title": "Lost bag", "description": "A brown leather bag lost in the cafeteria.",
-        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S")},
+        "incident_date": datetime.now(UTC).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S")},
         content_type="multipart/form-data")
     report_id = r.get_json()["data"]["id"]
     report = db.session.get(Report, report_id)
@@ -166,7 +167,7 @@ def test_close_report(client, db):
     r = client.post("/api/v1/reports", data={
         "report_type": "LOST", "category": "BAGS",
         "title": "Lost bag", "description": "A brown leather bag lost in the cafeteria.",
-        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S")},
+        "incident_date": datetime.now(UTC).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S")},
         content_type="multipart/form-data")
     report_id = r.get_json()["data"]["id"]
     r = client.post(f"/api/v1/reports/{report_id}/close")

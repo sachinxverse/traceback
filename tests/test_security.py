@@ -1,15 +1,14 @@
 """Security tests (F14, Section 16, acceptance A13)."""
 import io
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from PIL import Image
-from tests.conftest import auth, login, image_file
+from tests.conftest import auth, login
 
 
 def test_rate_limit_login(app, db):
     # rate limits must be enabled at app init (create_app override)
-    from app import create_app
     import app.services.storage as storage_mod
+    from app import create_app
     from app.services.embeddings import reset_embedder
     reset_embedder()
     storage_mod.reset_storage()
@@ -41,7 +40,7 @@ def test_sql_injection_style_strings_handled(client, db):
         "report_type": "LOST", "category": "KEYS",
         "title": "Robert'); DROP TABLE users;--",
         "description": "A description containing SQL-looking text '; DROP TABLE users;-- done.",
-        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S")},
+        "incident_date": datetime.now(UTC).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S")},
         content_type="multipart/form-data")
     assert r.status_code == 201
     # users table still intact
@@ -55,7 +54,7 @@ def test_xss_escaped_in_pages(client, db):
         "report_type": "LOST", "category": "KEYS",
         "title": "Title <script>alert(1)</script>",
         "description": "Description with <img src=x onerror=alert(2)> payloads inside text.",
-        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S")},
+        "incident_date": datetime.now(UTC).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S")},
         content_type="multipart/form-data")
     rid = r.get_json()["data"]["id"]
     login(client, "xss@x.com")
@@ -73,12 +72,12 @@ def test_oversize_upload_413(app, client, db):
     r = client.post("/api/v1/reports", data={
         "report_type": "LOST", "category": "KEYS", "title": "Big",
         "description": "An over-sized upload that should be rejected with 413.",
-        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": datetime.now(UTC).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
         "images": fs}, content_type="multipart/form-data")
     assert r.status_code == 413
 
 
 def test_login_does_not_reveal_user_existence(client):
     r1 = client.post("/api/v1/auth/login", json={"email": "ghost@x.com", "password": "Whatever1"})
-    r2 = client.post("/api/v1/auth/login", json={"email": "ghost2@x.com", "password": "x"})
+    client.post("/api/v1/auth/login", json={"email": "ghost2@x.com", "password": "x"})
     assert r1.get_json()["error"]["message"] == "Invalid email or password"

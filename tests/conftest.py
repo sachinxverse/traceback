@@ -1,21 +1,20 @@
 """Shared pytest fixtures and factories (Section 17)."""
 import io
-import sys
 import os
-from datetime import datetime, timedelta, timezone
+import sys
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from flask.testing import FlaskClient
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from app import create_app  # noqa: E402
-from app.extensions import db as _db  # noqa: E402
-from app.models import (Claim, Institution, Match, Report, ReportImage, User)  # noqa: E402
-from app.models.enums import Category, Custody, ReportType, Role  # noqa: E402
+from werkzeug.datastructures import FileStorage
 
-
-from werkzeug.datastructures import FileStorage  # noqa: E402
+from app import create_app
+from app.extensions import db as _db
+from app.models import Institution, User
+from app.models.enums import Role
 
 
 class CsrfClient(FlaskClient):
@@ -41,7 +40,6 @@ class CsrfClient(FlaskClient):
         return super().open(*args, **kwargs)
 
 
-FlaskClient = FlaskClient  # explicit for the CsrfClient subclass
 
 
 @pytest.fixture()
@@ -85,7 +83,6 @@ def make_png(colour=(200, 30, 30), size=(200, 150), label=None):
 
 
 def image_file(colour=(200, 30, 30), name="photo.png"):
-    from werkzeug.datastructures import FileStorage
     return FileStorage(stream=make_png(colour), filename=name, content_type="image/png")
 
 
@@ -114,13 +111,12 @@ def create_report(client, report_type="LOST", category="WALLETS_CARDS",
                   title=None, description=None, days_ago=1,
                   lat=None, lng=None, images=0, custody=None,
                   institution_id=None, private_details=None, location_text=None):
-    from datetime import datetime
     data = {
         "report_type": report_type,
         "category": category,
         "title": title or f"{report_type.title()} {category} item",
         "description": description or "A detailed description of the item for matching purposes.",
-        "incident_date": (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days_ago)).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": (datetime.now(UTC).replace(tzinfo=None) - timedelta(days=days_ago)).strftime("%Y-%m-%dT%H:%M:%S"),
     }
     if lat is not None:
         data["latitude"] = str(lat)
@@ -135,7 +131,7 @@ def create_report(client, report_type="LOST", category="WALLETS_CARDS",
     if location_text:
         data["location_text"] = location_text
     files = []
-    payload = {k: (v if isinstance(v, str) else v) for k, v in data.items()}
+    payload = dict(data)
     for i in range(images):
         colour = (200, 30, 30) if report_type == "LOST" else (30, 30, 200)
         files.append((image_file(colour, f"{i}.png"),))
@@ -146,13 +142,13 @@ def create_report(client, report_type="LOST", category="WALLETS_CARDS",
 
 def create_report_with_images(client, report_type, images_spec, **kwargs):
     """images_spec: list of (colour, filename) for deterministic stub embeddings."""
-    from datetime import datetime, timedelta
+    from datetime import timedelta
     data = {
         "report_type": report_type,
         "category": kwargs.get("category", "WALLETS_CARDS"),
         "title": kwargs.get("title", f"{report_type.title()} test item"),
         "description": kwargs.get("description", "A detailed description for the test item."),
-        "incident_date": (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=kwargs.get("days_ago", 1))).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": (datetime.now(UTC).replace(tzinfo=None) - timedelta(days=kwargs.get("days_ago", 1))).strftime("%Y-%m-%dT%H:%M:%S"),
     }
     if kwargs.get("lat") is not None:
         data["latitude"] = str(kwargs["lat"])

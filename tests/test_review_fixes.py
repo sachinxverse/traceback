@@ -2,14 +2,14 @@
 
 Each test fails before the corresponding fix and passes after.
 """
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
-from tests.conftest import auth, login
 
 from app.extensions import db
 from app.models import Claim, Match, Notification, Report, User
 from app.models.enums import ClaimStatus, MatchStatus, ReportStatus, Role
+from tests.conftest import auth, login
 
 
 def make_admin(db, email="admin@traceback.local"):
@@ -37,6 +37,7 @@ def _ensure_match(db, lost_id, found_id):
 
 def _img(colour=(120, 70, 20)):
     import io
+
     from PIL import Image
     from werkzeug.datastructures import FileStorage
     buf = io.BytesIO()
@@ -54,7 +55,7 @@ def _pair(client, lost_email="owner@test.com", found_email="finder@test.com",
         "report_type": "LOST", "category": "WALLETS_CARDS",
         "title": "Lost brown wallet",
         "description": desc,
-        "incident_date": (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": (datetime.now(UTC).replace(tzinfo=None) - timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%S"),
         "private_details": "Initials J.K.",
         "images": _img()}, content_type="multipart/form-data")
     lost_id = r.get_json()["data"]["id"]
@@ -65,7 +66,7 @@ def _pair(client, lost_email="owner@test.com", found_email="finder@test.com",
         "report_type": "FOUND", "category": "WALLETS_CARDS",
         "title": "Brown wallet found",
         "description": "A brown leather wallet was found near the fountain area.",
-        "incident_date": (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": (datetime.now(UTC).replace(tzinfo=None) - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%S"),
         "custody": "WITH_FINDER",
         "images": _img()}, content_type="multipart/form-data")
     found_id = r.get_json()["data"]["id"]
@@ -78,7 +79,7 @@ def _lost_report(client, email, name, title, desc, days_ago=3):
     r = client.post("/api/v1/reports", data={
         "report_type": "LOST", "category": "WALLETS_CARDS",
         "title": title, "description": desc,
-        "incident_date": (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days_ago)).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": (datetime.now(UTC).replace(tzinfo=None) - timedelta(days=days_ago)).strftime("%Y-%m-%dT%H:%M:%S"),
         "images": _img()}, content_type="multipart/form-data")
     assert r.status_code == 201, r.get_data(as_text=True)
     lost_id = r.get_json()["data"]["id"]
@@ -381,7 +382,8 @@ def test_a5_dispute_locks_item_against_competing_claims(client, app, db):
 # ----------------------------------------------------------------- B2
 def test_b2_production_validate_rejects_placeholders_and_short_keys():
     import os
-    from config import ProductionConfig, get_config
+
+    from config import ProductionConfig
 
     env = {
         "SECRET_KEY": "please-change-this-secret",
@@ -425,7 +427,7 @@ def test_b2_compose_has_no_insecure_defaults():
     assert 'COOKIE_SECURE: "false"' not in text
     # db service must not publish ports
     db_block = text.split("\n  db:\n")[1]
-    assert not re.search(r"^\s+ports:", db_block, re.M)
+    assert not re.search(r"^\s+ports:", db_block, re.MULTILINE)
 
 
 def test_b2_dockerfile_separates_torch_index():
@@ -442,9 +444,9 @@ def test_b2_dockerfile_separates_torch_index():
 def test_b3_migration_upgrade_and_check(tmp_path, monkeypatch):
     """A fresh empty database can be migrated with `flask db upgrade` and
     `flask db check` reports no differences."""
+    import os
     import subprocess
     import sys
-    import os
     py = sys.executable
     dbfile = tmp_path / "mig.db"
     env = dict(os.environ)
@@ -486,7 +488,7 @@ def _seed_claims(db, n=120):
         db.session.commit()
     finder = db.session.query(User).filter_by(email="pagerf@test.com").one()
     from datetime import datetime, timedelta
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    now = datetime.now(UTC).replace(tzinfo=None)
     lost = Report(user_id=claimant.id, report_type="LOST", category="WALLETS_CARDS",
                   title="Lost wallet", description="desc", status="ACTIVE",
                   incident_date=now - timedelta(days=2))
@@ -525,6 +527,7 @@ def test_c1_claims_mine_paginates_and_caps(client, app, db):
 def test_c1_query_count_constant_across_pages(client, app, db):
     """N+1 check: page 1 and page 3 execute the same number of SQL queries."""
     from sqlalchemy import event
+
     from app.extensions import db as _db
     _seed_claims(db)
     login(client, "pager@test.com")
@@ -536,7 +539,7 @@ def test_c1_query_count_constant_across_pages(client, app, db):
             n[0] += 1
         with app.test_request_context():
             pass
-        ev = event.listen(_db.engine, "before_cursor_execute", _count)
+        event.listen(_db.engine, "before_cursor_execute", _count)
         try:
             r = client.get(f"/api/v1/claims/mine?per_page=10&page={page}")
             assert r.status_code == 200
@@ -587,8 +590,10 @@ def test_c2_stub_embedder_separates_different_colours():
     so different-coloured items scored ~0.98. Identical images must still
     score 1.0; different border colours must fall below the image band."""
     import io
+
     import numpy as np
     from PIL import Image
+
     from app.services.embeddings import StubEmbedder
 
     def img(colour):
@@ -613,9 +618,9 @@ def test_c2_stub_embedder_separates_different_colours():
 def test_c2_evaluation_reports_both_labels(tmp_path, monkeypatch):
     """The evaluation harness handles positive AND negative pairs."""
     import csv
+    import os
     import subprocess
     import sys
-    import os
     labels = tmp_path / "labels.csv"
     with open(labels, "w", newline="") as fh:
         w = csv.writer(fh)
@@ -632,8 +637,8 @@ def test_c2_evaluation_reports_both_labels(tmp_path, monkeypatch):
 # ----------------------------------------------------------------- C4
 def _ratelimit_app():
     from app import create_app
-    from app.services.embeddings import reset_embedder
     from app.services import storage as storage_mod
+    from app.services.embeddings import reset_embedder
     reset_embedder()
     storage_mod.reset_storage()
     app = create_app("testing", ratelimit_enabled=True)
@@ -706,8 +711,8 @@ def test_c4_cdn_assets_pinned_with_sri_and_narrow_csp():
         assert re.search(r"@\d+\.\d+", url), f"unpinned: {url}"
         assert integrity.startswith("sha384-"), f"missing SRI: {url}"
     from app import create_app
-    from app.services.embeddings import reset_embedder
     from app.services import storage as storage_mod
+    from app.services.embeddings import reset_embedder
     reset_embedder(); storage_mod.reset_storage()
     app = create_app("testing")
     with app.test_client().get("/login") as r:
