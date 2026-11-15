@@ -90,8 +90,12 @@ function initReportMap() {
   L.marker([lat, lng]).addTo(map);
 }
 
+// Attribute-safe escape: &, <, >, double and single quotes (review C4).
 function escapeHtml(s) {
-  const d = document.createElement('div');
-  d.textContent = s || '';
-  return d.innerHTML;
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }

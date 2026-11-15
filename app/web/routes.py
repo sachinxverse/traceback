@@ -1,12 +1,11 @@
 """HTML page routes (Section 11.3)."""
-from datetime import datetime
+from datetime import UTC, datetime
 
 from flask import Blueprint, abort, redirect, render_template, request
 from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 
 from ..extensions import db
 from ..models import Institution, Report, User
-from ..models.enums import InstitutionType
 
 web_bp = Blueprint("web", __name__)
 
@@ -17,7 +16,7 @@ def _current_user():
         verify_jwt_in_request()
         uid = get_jwt_identity()
         return db.session.get(User, int(uid)) if uid else None
-    except Exception:
+    except Exception:  # noqa: BLE001 - a bad session must not break rendering
         return None
 
 
@@ -25,7 +24,7 @@ def _current_user():
 def inject_globals():
     return {
         "nav_user": _current_user(),
-        "now": datetime.utcnow(),
+        "now": datetime.now(UTC).replace(tzinfo=None),
     }
 
 
@@ -45,7 +44,7 @@ def _require_admin():
 
 @web_bp.get("/")
 def index():
-    from ..models import Report, Match, Institution
+    from ..models import Institution, Report
     recovered = Report.query.filter_by(status="RECOVERED").count()
     insts = Institution.query.filter_by(is_active=True).all()
     stats = {"recovered": recovered, "institutions": len(insts),
@@ -88,7 +87,7 @@ def login_page():
 @web_bp.get("/dashboard")
 def dashboard():
     user = _require_login()
-    from ..models import Match, Claim
+    from ..models import Claim, Match
     from ..models.enums import ClaimStatus
     reports = Report.query.filter_by(user_id=user.id).order_by(Report.created_at.desc()).all()
     report_data = []
@@ -129,7 +128,7 @@ def dashboard():
 @web_bp.get("/report/lost")
 @web_bp.get("/report/found")
 def report_form():
-    user = _require_login()
+    _require_login()
     rtype = "lost" if request.path.endswith("/lost") else "found"
     institutions = Institution.query.filter_by(is_active=True).all()
     prefill_slug = request.args.get("institution")
@@ -162,8 +161,8 @@ def _can_view(user, report):
 @web_bp.get("/matches/<int:match_id>")
 def match_detail(match_id):
     user = _require_login()
-    from ..models import Match
     from ..api._auth import can_participate_in_match
+    from ..models import Match
     match = db.session.get(Match, match_id)
     if match is None or not can_participate_in_match(user, match):
         abort(404)
@@ -195,7 +194,6 @@ def claims_page():
 
 def _reviewable_claims(user):
     from ..models import Claim
-    from ..models.enums import Custody, Role
     claims = Claim.query.order_by(Claim.created_at.desc()).all()
     out = []
     for c in claims:
@@ -220,7 +218,7 @@ def claim_detail(claim_id):
 
 @web_bp.get("/browse")
 def browse():
-    user = _require_login()
+    _require_login()
     q = Report.query.filter_by(report_type="FOUND", status="ACTIVE")
     category = request.args.get("category", "")
     if category:

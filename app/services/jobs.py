@@ -23,7 +23,7 @@ def _get_executor(app):
     return _executor
 
 
-def enqueue_report_processing(app, report_id: int):
+def enqueue_report_processing(app, report_id: int) -> None:
     """Queue process_report for a saved report (sync when JOBS_SYNC)."""
     from flask import has_app_context
     if app.config.get("JOBS_SYNC"):
@@ -46,12 +46,12 @@ def enqueue_report_processing(app, report_id: int):
     _get_executor(app).submit(_run)
 
 
-def process_report(report_id: int):
+def process_report(report_id: int) -> None:
     """Generate embeddings for a report and run matching (Section 9.1)."""
     from ..extensions import db
-    from ..models import Report, ReportImage
+    from ..models import Report
     from ..models.enums import ProcessingStatus
-    from .embeddings import get_embedder, to_blob, from_blob, IMAGE_DIM
+    from .embeddings import get_embedder, to_blob
     from .matching import find_and_store_matches
 
     report = db.session.get(Report, report_id)
@@ -62,7 +62,6 @@ def process_report(report_id: int):
     app = current_app._get_current_object()
     try:
         embedder = get_embedder(app)
-        storage_backend_module = None
         from .storage import get_storage
         storage = get_storage(app)
 
@@ -89,10 +88,10 @@ def process_report(report_id: int):
         log.exception("Embedding/matching failed for report %s", report_id)
 
 
-def reindex_all(app):
+def reindex_all(app) -> None:
     """Recompute all embeddings and matches (flask reindex)."""
     from ..extensions import db
-    from ..models import Report, ReportImage
+    from ..models import Report
     from ..models.enums import ProcessingStatus
     from .embeddings import get_embedder, to_blob
     from .matching import find_and_store_matches

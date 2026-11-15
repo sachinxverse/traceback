@@ -1,5 +1,5 @@
 """Matching engine tests (F4, F5, Section 9, acceptance A3-A5)."""
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from tests.conftest import auth, register, login, image_file
 
@@ -24,7 +24,7 @@ def _submit(client, report_type, title, desc, days_ago, images_spec,
     data = {
         "report_type": report_type, "category": category,
         "title": title, "description": desc,
-        "incident_date": (datetime.utcnow() - timedelta(days=days_ago)).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days_ago)).strftime("%Y-%m-%dT%H:%M:%S"),
     }
     if lat is not None:
         data["latitude"] = str(lat)

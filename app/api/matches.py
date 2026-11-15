@@ -1,8 +1,8 @@
 """Match endpoints (Section 7.5)."""
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from .. import ApiError
-from ..extensions import db, limiter
+from ..extensions import db
 from ..models import Match
 from ..models.enums import MatchStatus
 from ._auth import can_participate_in_match, current_user

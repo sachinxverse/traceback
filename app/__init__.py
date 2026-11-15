@@ -90,16 +90,16 @@ def create_app(config_name=None, **overrides):
         return _jwt_error_response(401, "TOKEN_REVOKED", "The token has been revoked")
 
     # -- Blueprints -----------------------------------------------------------
+    from .api.admin import admin_bp
     from .api.auth import auth_bp
-    from .api.reports import reports_bp
-    from .api.images import images_bp
-    from .api.matches import matches_bp
     from .api.claims import claims_bp
+    from .api.health import health_bp
+    from .api.images import images_bp
+    from .api.institutions import institutions_bp
+    from .api.matches import matches_bp
     from .api.messages import messages_bp
     from .api.notifications import notifications_bp
-    from .api.institutions import institutions_bp
-    from .api.admin import admin_bp
-    from .api.health import health_bp
+    from .api.reports import reports_bp
     from .web.routes import web_bp
 
     for bp in (auth_bp, reports_bp, images_bp, matches_bp, claims_bp, messages_bp,
@@ -169,8 +169,8 @@ def create_app(config_name=None, **overrides):
     def set_headers(resp):
         csp = (
             "default-src 'self'; "
-            "script-src 'self' https://cdn.jsdelivr.net https://unpkg.com; "
-            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://fonts.googleapis.com; "
+            "script-src 'self' https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
             "font-src 'self' https://cdn.jsdelivr.net https://fonts.gstatic.com data:; "
             "img-src 'self' data: blob: https://*.tile.openstreetmap.org; "
             "connect-src 'self' https://nominatim.openstreetmap.org; "

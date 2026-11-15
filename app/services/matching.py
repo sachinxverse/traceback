@@ -6,8 +6,14 @@ from datetime import timedelta
 import numpy as np
 
 from ..extensions import db
-from ..models import Match, Report, ReportImage
-from ..models.enums import Category, MatchStatus, ProcessingStatus, ReportStatus, ReportType
+from ..models import Match, Report
+from ..models.enums import (
+    Category,
+    MatchStatus,
+    ProcessingStatus,
+    ReportStatus,
+    ReportType,
+)
 from .geo import haversine_km
 
 log = logging.getLogger("traceback.matching")
@@ -26,7 +32,6 @@ def get_candidates(report: Report):
     """Hard filters (Section 9.3). Candidates are opposite-type reports that
     are ACTIVE/CLAIM_PENDING, READY, not removed, not the same user, category
     compatible, time-plausible and distance-plausible."""
-    from .embeddings import from_blob, TEXT_DIM
     opposite = ReportType.FOUND if report.is_lost else ReportType.LOST
 
     base = Report.query.filter(
@@ -135,7 +140,7 @@ def component_scores(report: Report, candidate: Report, text_emb_r, text_emb_c,
     return scores
 
 
-def combined_score(scores: dict, weights: dict):
+def combined_score(scores: dict, weights: dict) -> tuple | None:
     """Renormalised weighted mean over available signals (Section 9.5).
     Returns (total, signals_used) or (None, []) when no content signal."""
     available = {s: v for s, v in scores.items() if v is not None}
@@ -148,10 +153,11 @@ def combined_score(scores: dict, weights: dict):
     return round(float(min(total, 1.0)), 4), list(available.keys())
 
 
-def find_and_store_matches(report: Report, notify: bool = True):
+def find_and_store_matches(report: Report, notify: bool = True) -> None:
     """Run matching for one report, upserting Match rows (Section 9.6)."""
-    from .embeddings import from_blob, TEXT_DIM, IMAGE_DIM
     from flask import current_app
+
+    from .embeddings import IMAGE_DIM, TEXT_DIM, from_blob
 
     app = current_app._get_current_object()
     weights = _weights(app)

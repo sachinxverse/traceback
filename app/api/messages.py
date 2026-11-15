@@ -6,8 +6,8 @@ from flask import Blueprint, jsonify, request
 from .. import ApiError
 from ..extensions import db, limiter
 from ..models import Match, Message
-from ._auth import can_participate_in_match, current_user, messaging_allowed
 from ..services.notifications import notify
+from ._auth import can_participate_in_match, current_user, messaging_allowed
 
 messages_bp = Blueprint("messages", __name__, url_prefix="")
 

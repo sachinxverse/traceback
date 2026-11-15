@@ -1,15 +1,23 @@
 """Demo seed data (Section 15.2) - idempotent."""
 import io
 import random
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from app.extensions import db
-from app.models import (Claim, Institution, Match, Report, ReportImage, User)
-from app.models.enums import (Category, ClaimStatus, Custody, InstitutionType,
-                              MatchStatus, ReportStatus, ReportType, Role)
+from app.models import Claim, Institution, Match, Report, ReportImage, User
+from app.models.enums import (
+    Category,
+    ClaimStatus,
+    Custody,
+    InstitutionType,
+    MatchStatus,
+    ReportStatus,
+    ReportType,
+    Role,
+)
 from app.services.images import validate_and_process
-from app.services.storage import get_storage
 from app.services.jobs import process_report
+from app.services.storage import get_storage
 
 DEMO_USERS = [
     ("Admin", "admin@traceback.local", "Admin@12345", Role.ADMIN, None),
@@ -157,7 +165,7 @@ def run_seed(app):
             category=Category(category),
             title=title, description=desc, private_details=private,
             latitude=lat, longitude=lng, location_text=loc,
-            incident_date=datetime.utcnow() - timedelta(days=days_ago),
+            incident_date=datetime.now(UTC).replace(tzinfo=None) - timedelta(days=days_ago),
             custody=Custody(custody) if custody else None,
             status=ReportStatus.ACTIVE,
             processing_status="PENDING",
@@ -167,7 +175,7 @@ def run_seed(app):
         data = _placeholder_image(colour, label)
         meta = validate_and_process(data, f"{label.lower()}.png",
                                     max_mb=app.config["MAX_IMAGE_MB"])
-        key = f"{datetime.utcnow():%Y}/{datetime.utcnow():%m}/seed-{len(reports)}.jpg"
+        key = f"{datetime.now(UTC).replace(tzinfo=None):%Y}/{datetime.now(UTC).replace(tzinfo=None):%m}/seed-{len(reports)}.jpg"
         storage.save(meta["data"], key)
         img = ReportImage(report=r, storage_key=key, mime_type="image/jpeg",
                           width=meta["width"], height=meta["height"],
@@ -217,8 +225,6 @@ def run_seed(app):
 
 def _create_sample_claims(reports, users, created):
     """One pending claim, one completed recovery, one disputed claim."""
-    alice = users[2]  # alice
-
     # pick the wallet pair
     lost_wallet = next(r for r in reports if r.report_type == ReportType.LOST and r.category == Category.WALLETS_CARDS)
     found_wallet = next(r for r in reports if r.report_type == ReportType.FOUND and r.category == Category.WALLETS_CARDS)
@@ -246,14 +252,14 @@ def _create_sample_claims(reports, users, created):
                       claim_details="My steel bottle with a dent near the bottom and a name tape inside the cap.",
                       verification_status=ClaimStatus.COMPLETED,
                       review_note="Details match private description.",
-                      handed_over_at=datetime.utcnow() - timedelta(days=3),
-                      received_confirmed_at=datetime.utcnow() - timedelta(days=3))
+                      handed_over_at=datetime.now(UTC).replace(tzinfo=None) - timedelta(days=3),
+                      received_confirmed_at=datetime.now(UTC).replace(tzinfo=None) - timedelta(days=3))
         db.session.add(claim)
         bottle_match.status = MatchStatus.CONFIRMED
         lost_bottle.status = ReportStatus.RECOVERED
-        lost_bottle.recovered_at = datetime.utcnow() - timedelta(days=3)
+        lost_bottle.recovered_at = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=3)
         found_bottle.status = ReportStatus.RECOVERED
-        found_bottle.recovered_at = datetime.utcnow() - timedelta(days=3)
+        found_bottle.recovered_at = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=3)
 
     # earbuds pair -> rejected then disputed
     lost_buds = next(r for r in reports if r.report_type == ReportType.LOST and r.category == Category.ELECTRONICS)

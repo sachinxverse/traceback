@@ -1,5 +1,5 @@
 """Claim workflow tests (F7, F8, Section 10, acceptance A6, A7)."""
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from tests.conftest import auth, login, register
@@ -12,7 +12,7 @@ def _setup_pair(client, app):
         "report_type": "LOST", "category": "WALLETS_CARDS",
         "title": "Lost brown wallet",
         "description": "Lost my brown wallet near the fountain with cards inside.",
-        "incident_date": (datetime.utcnow() - timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%S"),
         "private_details": "Initials J.K., blue card holder inside",
         "images": _img((120, 70, 20))},
         content_type="multipart/form-data")
@@ -24,7 +24,7 @@ def _setup_pair(client, app):
         "report_type": "FOUND", "category": "WALLETS_CARDS",
         "title": "Brown wallet found",
         "description": "A brown leather wallet was found near the fountain area.",
-        "incident_date": (datetime.utcnow() - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%S"),
         "private_details": "Brown wallet with initials inside",
         "custody": "WITH_FINDER",
         "images": _img((125, 75, 25))},
@@ -184,7 +184,7 @@ def test_reviewer_rule_by_custody(client, app, db):
     r = client.post("/api/v1/reports", data={
         "report_type": "LOST", "category": "KEYS", "title": "Lost keys",
         "description": "Lost my keys with a blue keychain near the gate.",
-        "incident_date": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
         "images": _img((30, 30, 220))}, content_type="multipart/form-data")
     lost_id = r.get_json()["data"]["id"]
     client.post("/api/v1/auth/logout")
@@ -193,7 +193,7 @@ def test_reviewer_rule_by_custody(client, app, db):
     r = client.post("/api/v1/reports", data={
         "report_type": "FOUND", "category": "KEYS", "title": "Keys found",
         "description": "Found keys with a blue keychain near the main gate.",
-        "incident_date": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
         "institution_id": str(inst.id), "custody": "AT_INSTITUTION",
         "images": _img((35, 35, 225))}, content_type="multipart/form-data")
     found_id = r.get_json()["data"]["id"]
@@ -228,7 +228,7 @@ def test_other_claims_auto_rejected_on_completion(client, app, db):
         "report_type": "LOST", "category": "WALLETS_CARDS",
         "title": "Lost brown wallet today",
         "description": "I misplaced my brown wallet by the fountain this morning.",
-        "incident_date": (datetime.utcnow() - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%S"),
         "images": _img((121, 71, 21))}, content_type="multipart/form-data")
     lost3 = r.get_json()["data"]
     r = client.get(f"/api/v1/reports/{lost3['id']}/matches")

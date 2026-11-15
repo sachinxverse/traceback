@@ -2,7 +2,7 @@
 images, reports browse/close, admin filters, analytics, storage, embeddings,
 jobs, notifications email path."""
 import io
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from PIL import Image
@@ -24,7 +24,7 @@ def _pair(client):
     r = client.post("/api/v1/reports", data={
         "report_type": "LOST", "category": "WALLETS_CARDS", "title": "Lost brown wallet",
         "description": "Lost my brown wallet near the fountain with cards inside.",
-        "incident_date": (datetime.utcnow() - timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%S"),
         "images": _img((120, 70, 20))}, content_type="multipart/form-data")
     lost_id = r.get_json()["data"]["id"]
     client.post("/api/v1/auth/logout")
@@ -32,7 +32,7 @@ def _pair(client):
     r = client.post("/api/v1/reports", data={
         "report_type": "FOUND", "category": "WALLETS_CARDS", "title": "Brown wallet found",
         "description": "A brown leather wallet was found near the fountain area.",
-        "incident_date": (datetime.utcnow() - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%S"),
         "custody": "WITH_FINDER", "images": _img((125, 75, 25))},
         content_type="multipart/form-data")
     found_id = r.get_json()["data"]["id"]
@@ -119,14 +119,14 @@ def test_notifications_flow(client, app):
     r = client.post("/api/v1/reports", data={
         "report_type": "LOST", "category": "WALLETS_CARDS", "title": "Lost blue case",
         "description": "Lost my blue phone case near the fountain steps.",
-        "incident_date": (datetime.utcnow() - timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%S"),
         "images": _img((20, 40, 200))}, content_type="multipart/form-data")
     client.post("/api/v1/auth/logout")
     auth(client, "n2@test.com", "N2")
     client.post("/api/v1/reports", data={
         "report_type": "FOUND", "category": "WALLETS_CARDS", "title": "Blue case found",
         "description": "A blue phone case was found near the fountain steps today.",
-        "incident_date": (datetime.utcnow() - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%S"),
         "custody": "WITH_FINDER", "images": _img((25, 45, 205))},
         content_type="multipart/form-data")
     r = client.get("/api/v1/notifications/unread-count")
@@ -179,7 +179,7 @@ def test_browse_filters(client, app):
     client.post("/api/v1/reports", data={
         "report_type": "FOUND", "category": "KEYS", "title": "Found bunch of keys",
         "description": "A bunch of keys was found near the west gate entrance.",
-        "incident_date": (datetime.utcnow() - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%S"),
         "custody": "WITH_FINDER", "images": _img((30, 30, 210))},
         content_type="multipart/form-data")
     r = client.get("/api/v1/reports/browse?q=keys&category=KEYS")
@@ -195,7 +195,7 @@ def test_report_image_add_delete_and_reprocess(client, app):
     r = client.post("/api/v1/reports", data={
         "report_type": "LOST", "category": "BAGS", "title": "Lost red bag",
         "description": "A red shoulder bag lost in the food court area.",
-        "incident_date": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S")},
+        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S")},
         content_type="multipart/form-data")
     rid = r.get_json()["data"]["id"]
     # add one image (total 1 <= 4)
@@ -253,7 +253,7 @@ def test_admin_recoveries_and_audit_and_reports_filters(client, app, db):
     r = client.get("/api/v1/admin/audit-logs?page=1&per_page=5")
     assert r.status_code == 200
     # analytics endpoints with date args
-    today = datetime.utcnow().strftime("%Y-%m-%d")
+    today = datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%d")
     for ep in ("summary", "timeseries", "categories", "heatmap"):
         r = client.get(f"/api/v1/admin/analytics/{ep}?from=2026-01-01&to={today}")
         assert r.status_code == 200, ep
@@ -267,7 +267,7 @@ def test_admin_staff_scoped_reports(client, app, db):
     client.post("/api/v1/reports", data={
         "report_type": "LOST", "category": "KEYS", "title": "No inst keys",
         "description": "Keys lost somewhere without any institution attached.",
-        "incident_date": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S")},
+        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S")},
         content_type="multipart/form-data")
     client.post("/api/v1/auth/logout")
     login(client, "scoped@x.com")
@@ -282,7 +282,7 @@ def test_categories_endpoint(client, app, db):
     client.post("/api/v1/reports", data={
         "report_type": "LOST", "category": "SPORTS", "title": "Lost ball",
         "description": "Lost a red ball on the sports field this afternoon.",
-        "incident_date": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S")},
+        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S")},
         content_type="multipart/form-data")
     client.post("/api/v1/auth/logout")
     from app.models import User
@@ -354,7 +354,7 @@ def test_process_report_failure_marks_failed(app, db, monkeypatch):
     r = client.post("/api/v1/reports", data={
         "report_type": "LOST", "category": "KEYS", "title": "Failure keys",
         "description": "Keys report used to test the failure handling path.",
-        "incident_date": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S")},
+        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S")},
         content_type="multipart/form-data")
     rid = r.get_json()["data"]["id"]
     from app.services.matching import find_and_store_matches
@@ -382,7 +382,7 @@ def test_email_failure_never_breaks_request(app, db):
     r = client.post("/api/v1/reports", data={
         "report_type": "LOST", "category": "KEYS", "title": "Mail keys",
         "description": "Keys report used to test the email failure path.",
-        "incident_date": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S")},
+        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S")},
         content_type="multipart/form-data")
     assert r.status_code == 201
     app.config["MAIL_ENABLED"] = False

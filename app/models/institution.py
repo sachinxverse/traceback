@@ -2,8 +2,8 @@
 import re
 
 from ..extensions import db
+from . import Boolean, Column, DateTime, Enum, Float, Integer, String, Text, utcnow
 from .enums import InstitutionType
-from . import Column, Integer, String, Text, Float, Boolean, DateTime, Enum, utcnow
 
 
 def slugify(name: str) -> str:

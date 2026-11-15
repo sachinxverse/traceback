@@ -1,5 +1,5 @@
 """HTML page tests (test_pages, Section 17)."""
-from datetime import datetime
+from datetime import datetime, timezone
 
 from tests.conftest import auth, login, make_institution, image_file
 
@@ -50,7 +50,7 @@ def test_report_detail_page_for_owner(client, db):
     r = client.post("/api/v1/reports", data={
         "report_type": "LOST", "category": "KEYS", "title": "Detail test keys",
         "description": "Description for the detail page render test keys.",
-        "incident_date": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
         "images": image_file()}, content_type="multipart/form-data")
     rid = r.get_json()["data"]["id"]
     r = client.get(f"/reports/{rid}")

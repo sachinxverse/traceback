@@ -1,6 +1,6 @@
 """Database models for Project TRACEBACK (Section 5 of the spec)."""
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from ..extensions import db
 
@@ -21,7 +21,7 @@ Enum = lambda *values, name=None: db.Enum(*values, name=name, native_enum=False)
 
 def utcnow():
     """Naive UTC timestamp used for all model timestamps (spec: timezone-naive UTC)."""
-    return datetime.utcnow()
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def new_uuid():
@@ -36,9 +36,9 @@ def utc_iso(dt):
 
 
 # Import submodules so that all tables register on db.metadata.
-from .user import User  # noqa: E402,F401
-from .institution import Institution  # noqa: E402,F401
-from .report import Report, ReportImage  # noqa: E402,F401
-from .match import Match  # noqa: E402,F401
-from .claim import Claim  # noqa: E402,F401
-from .misc import Message, Notification, TokenBlocklist, AuditLog, ClaimImage  # noqa: E402,F401
+from .claim import Claim  # noqa: F401
+from .institution import Institution  # noqa: F401
+from .match import Match  # noqa: F401
+from .misc import AuditLog, ClaimImage, Message, Notification, TokenBlocklist  # noqa: F401
+from .report import Report, ReportImage  # noqa: F401
+from .user import User  # noqa: F401

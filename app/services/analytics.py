@@ -1,14 +1,13 @@
 """Analytics aggregate queries (Section 14)."""
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func
 
-from ..extensions import db
 from ..models import Claim, Institution, Match, Report, User
 from ..models.enums import ClaimStatus, MatchStatus, ReportStatus, ReportType
 
 
-def summary(user=None, from_date=None, to_date=None):
+def summary(user=None, from_date: str | None = None, to_date: str | None = None) -> dict:
     """KPI summary. STAFF are scoped to their institution."""
     q = Report.query
     inst_id = None
@@ -49,7 +48,7 @@ def summary(user=None, from_date=None, to_date=None):
     rejected = sum(1 for c in decided if c.verification_status == ClaimStatus.REJECTED)
     false_candidate_rate = (rejected / len(decided)) if decided else 0.0
 
-    all_reports_count = total if not inst_id else total
+    all_reports_count = total
     verified_recovery_rate = (recovered / all_reports_count) if all_reports_count else 0.0
     potential_match_rate = (matched_reports / all_reports_count) if all_reports_count else 0.0
 
@@ -68,7 +67,7 @@ def summary(user=None, from_date=None, to_date=None):
 
     active_users_30d = User.query.filter(
         User.is_active.is_(True),
-        User.last_login_at >= datetime.utcnow() - timedelta(days=30)).count() \
+        User.last_login_at >= datetime.now(UTC).replace(tzinfo=None) - timedelta(days=30)).count() \
         if inst_id is None else None
     institutions_count = Institution.query.filter_by(is_active=True).count() \
         if inst_id is None else None
@@ -92,9 +91,9 @@ def summary(user=None, from_date=None, to_date=None):
     }
 
 
-def timeseries(user=None, from_date=None, to_date=None):
+def timeseries(user=None, from_date: str | None = None, to_date: str | None = None) -> list:
     """Daily counts of lost/found/recovered reports. Default last 30 days."""
-    end = to_date or datetime.utcnow()
+    end = to_date or datetime.now(UTC).replace(tzinfo=None)
     start = from_date or (end - timedelta(days=30))
     q = Report.query.filter(Report.created_at >= start, Report.created_at < end)
     if user is not None and user.role.value == "STAFF":
@@ -120,7 +119,7 @@ def timeseries(user=None, from_date=None, to_date=None):
     return {"interval": "day", "points": out}
 
 
-def categories(user=None, from_date=None, to_date=None):
+def categories(user=None, from_date: str | None = None, to_date: str | None = None) -> list:
     q = Report.query
     if user is not None and user.role.value == "STAFF":
         q = q.filter(Report.institution_id == user.institution_id)
@@ -148,7 +147,7 @@ def categories(user=None, from_date=None, to_date=None):
     return list(data.values())
 
 
-def heatmap(user=None, from_date=None, to_date=None):
+def heatmap(user=None, from_date: str | None = None, to_date: str | None = None) -> list:
     """Grid-aggregated counts rounded to 3 decimals; cells with count < 2 are
     omitted for privacy."""
     q = Report.query.filter(Report.latitude.isnot(None), Report.longitude.isnot(None))

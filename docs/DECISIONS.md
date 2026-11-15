@@ -26,3 +26,49 @@ as required by Section 1.2 and acceptance criterion A16.
 | 19 | Emails | When `MAIL_ENABLED=false` the email step is skipped entirely (notifications still land in-app); failures during send are logged and swallowed. | Spec Section 12. |
 | 21 | SQLAlchemy build | The dev/test venv installs SQLAlchemy from source (`pip install --no-binary sqlalchemy SQLAlchemy==2.0.48`) because the pre-built Cython wheel of `sqlalchemy.sql._cache_key_cy` crashes under coverage tracing on some Python builds ('InternalTraversal' object is not callable). The pinned version runs fine from wheels in normal operation. | Allows the required `pytest --cov` runs. |
 | 20 | testing debug artifact | `tests/test_zdebug3.py` was reduced to a placeholder comment after debugging (safe to delete). It contains no active tests. | Cleanup during development. |
+
+## Decisions from the independent review fixes (2026-11-16)
+
+22. **Single APPROVED claim per found item (A1).** `approve_claim` re-checks
+    APPROVED claims on the same found report inside a row-locked transaction
+    (`with_for_update()`; a no-op on SQLite, a real lock on PostgreSQL). A
+    second approval returns 409 CONFLICT.
+23. **Recovered items are terminal (A2).** `dispute_claim` and `approve_claim`
+    refuse when the found or lost report is RECOVERED (409 "Item already
+    recovered"). Approving a previously-released (DISPUTED/REJECTED) claim
+    re-locks the item: both reports -> CLAIM_PENDING, match -> CLAIMED.
+24. **Closing/removing a report cancels its live claims (A3).** PENDING and
+    DISPUTED claims are auto-rejected with the note "Item report was closed",
+    the counterpart report returns to ACTIVE, matches expire and claimants
+    are notified. Closing with an APPROVED claim stays blocked (409).
+25. **Dispute holds the item (A5).** While a claim is DISPUTED the found
+    report stays CLAIM_PENDING and the match CLAIMED; new claims on the held
+    item are refused (409). Admin REJECT releases the lock; admin APPROVE
+    keeps it through the approve path.
+26. **Audit from/to capture (A4).** Every claim transition logs
+    `{"from": old_status, "to": new_status}` captured BEFORE the change; the
+    rejection notification carries `related_match_id = claim.match_id`.
+27. **Registration reveals existing emails (C4).** Kept the spec's 409
+    CONFLICT on duplicate email: the UX benefit for the target user outweighs
+    the enumeration leak, and the register endpoint is rate-limited
+    (5/min) which blunts enumeration attempts.
+28. **Login lockout (C4).** After 5 failed logins for one (email, IP) within
+    15 minutes the account is locked for 15 minutes (429 with
+    retry_after_seconds). In-memory per-app store; successful login resets.
+29. **Alembic is the only schema path (B3).** The committed initial migration
+    creates the full schema; `flask init-db` runs `upgrade()` only and fails
+    loudly (no create_all fallback, no swallowed errors).
+30. **Production refuses weak secrets (B2).** `ProductionConfig.validate()`
+    rejects placeholder values and keys < 32 chars; docker-compose requires
+    SECRET_KEY / JWT_SECRET_KEY / POSTGRES_PASSWORD via `${VAR:?}` and does
+    not publish the database port.
+31. **Stub embedder colour signature (C2).** The stub image vector combines a
+    muted 8x8 RGB block with a strong one-hot border-colour signature so
+    different-coloured items no longer look near-identical (identical images
+    still score 1.0).
+32. **Real-backend FPR accepted (C2).** The real backend's 0.188 false-positive
+    rate comes from wallet-vs-wallet hard negatives; matches only notify —
+    the claims workflow remains the human confirmation step.
+33. **CDN assets pinned with SRI (C4).** All libraries pinned to exact
+    versions with sha384 integrity + crossorigin; Leaflet moved to
+    cdn.jsdelivr.net so the CSP allows a single script/style host.

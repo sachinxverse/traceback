@@ -10,7 +10,7 @@ Invariants enforced here (review fixes A1/A2/A4/A5):
   until an admin resolves it.
 - Every audit log records {"from", "to"} status transitions.
 """
-from datetime import datetime
+from datetime import UTC, datetime
 
 from ..extensions import db
 from ..models import Claim, Match, Report
@@ -98,9 +98,8 @@ def _release_item(claim: Claim):
             found_report.status = ReportStatus.ACTIVE
         if match.status == MatchStatus.CLAIMED:
             match.status = MatchStatus.SUGGESTED
-    if not others:
-        if lost_report.status == ReportStatus.CLAIM_PENDING:
-            lost_report.status = ReportStatus.ACTIVE
+    if not others and lost_report.status == ReportStatus.CLAIM_PENDING:
+        lost_report.status = ReportStatus.ACTIVE
 
 
 def _audit(claim, action, actor, old_status, note=None, extra=None):
@@ -114,7 +113,7 @@ def _audit(claim, action, actor, old_status, note=None, extra=None):
                       details=details)
 
 
-def approve_claim(claim: Claim, reviewer, review_note=None):
+def approve_claim(claim: Claim, reviewer, review_note: str | None = None) -> None:
     old_status = claim.verification_status
     if old_status not in (ClaimStatus.PENDING, ClaimStatus.DISPUTED):
         raise TransitionError(
@@ -135,7 +134,7 @@ def approve_claim(claim: Claim, reviewer, review_note=None):
     db.session.commit()
 
 
-def reject_claim(claim: Claim, reviewer, review_note):
+def reject_claim(claim: Claim, reviewer, review_note: str | None = None) -> None:
     old_status = claim.verification_status
     if old_status not in (ClaimStatus.PENDING, ClaimStatus.DISPUTED):
         raise TransitionError(
@@ -156,7 +155,8 @@ def reject_claim(claim: Claim, reviewer, review_note):
     db.session.commit()
 
 
-def close_claims_for_report(report: Report, actor=None, reason: str = CLOSE_NOTE):
+def close_claims_for_report(report: Report, actor=None,
+                            reason: str = CLOSE_NOTE) -> int:
     """A3: when a report is closed or removed, reject every live claim linked
     to it, release the counterpart report, expire matches and notify."""
     affected = 0
@@ -196,7 +196,7 @@ def _matches_of(report: Report):
         (Match.lost_report_id == report.id) | (Match.found_report_id == report.id)).all()
 
 
-def withdraw_claim(claim: Claim, claimant):
+def withdraw_claim(claim: Claim, claimant) -> None:
     old_status = claim.verification_status
     if old_status not in (ClaimStatus.PENDING, ClaimStatus.APPROVED):
         raise TransitionError(
@@ -207,7 +207,7 @@ def withdraw_claim(claim: Claim, claimant):
     db.session.commit()
 
 
-def dispute_claim(claim: Claim, claimant, reason):
+def dispute_claim(claim: Claim, claimant, reason: str) -> None:
     old_status = claim.verification_status
     found_report = claim.report
     if found_report.status == ReportStatus.RECOVERED:
@@ -242,7 +242,7 @@ def dispute_claim(claim: Claim, claimant, reason):
     db.session.commit()
 
 
-def resolve_disputed_rejection(claim: Claim, admin, note):
+def resolve_disputed_rejection(claim: Claim, admin, note: str | None = None) -> None:
     """Admin resolves a dispute as REJECT: release the item."""
     old_status = claim.verification_status
     claim.verification_status = ClaimStatus.REJECTED
@@ -258,11 +258,11 @@ def resolve_disputed_rejection(claim: Claim, admin, note):
     db.session.commit()
 
 
-def mark_handed_over(claim: Claim, reviewer):
+def mark_handed_over(claim: Claim, reviewer) -> None:
     old_status = claim.verification_status
     if claim.verification_status != ClaimStatus.APPROVED:
         raise TransitionError("Only approved claims can be marked handed over")
-    claim.handed_over_at = datetime.utcnow()
+    claim.handed_over_at = datetime.now(UTC).replace(tzinfo=None)
     claim.reviewer_id = reviewer.id
     _audit(claim, "claim_handover_marked", reviewer, old_status)
     notify(claim.claimant_id, "HANDOVER_MARKED",
@@ -271,7 +271,7 @@ def mark_handed_over(claim: Claim, reviewer):
     db.session.commit()
 
 
-def confirm_received(claim: Claim, claimant):
+def confirm_received(claim: Claim, claimant) -> None:
     old_status = claim.verification_status
     if claim.handed_over_at is None:
         raise TransitionError("Handover must be marked before confirming receipt")
@@ -280,9 +280,9 @@ def confirm_received(claim: Claim, claimant):
             f"Cannot complete a claim in state {claim.verification_status.value}")
 
     claim.verification_status = ClaimStatus.COMPLETED
-    claim.received_confirmed_at = datetime.utcnow()
+    claim.received_confirmed_at = datetime.now(UTC).replace(tzinfo=None)
 
-    now = datetime.utcnow()
+    now = datetime.now(UTC).replace(tzinfo=None)
     match = claim.match
     found_report = claim.report
     lost_report = match.lost_report

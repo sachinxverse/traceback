@@ -1,6 +1,6 @@
 """Security tests (F14, Section 16, acceptance A13)."""
 import io
-from datetime import datetime
+from datetime import datetime, timezone
 
 from PIL import Image
 from tests.conftest import auth, login, image_file
@@ -41,7 +41,7 @@ def test_sql_injection_style_strings_handled(client, db):
         "report_type": "LOST", "category": "KEYS",
         "title": "Robert'); DROP TABLE users;--",
         "description": "A description containing SQL-looking text '; DROP TABLE users;-- done.",
-        "incident_date": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S")},
+        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S")},
         content_type="multipart/form-data")
     assert r.status_code == 201
     # users table still intact
@@ -55,7 +55,7 @@ def test_xss_escaped_in_pages(client, db):
         "report_type": "LOST", "category": "KEYS",
         "title": "Title <script>alert(1)</script>",
         "description": "Description with <img src=x onerror=alert(2)> payloads inside text.",
-        "incident_date": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S")},
+        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S")},
         content_type="multipart/form-data")
     rid = r.get_json()["data"]["id"]
     login(client, "xss@x.com")
@@ -73,7 +73,7 @@ def test_oversize_upload_413(app, client, db):
     r = client.post("/api/v1/reports", data={
         "report_type": "LOST", "category": "KEYS", "title": "Big",
         "description": "An over-sized upload that should be rejected with 413.",
-        "incident_date": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
         "images": fs}, content_type="multipart/form-data")
     assert r.status_code == 413
 

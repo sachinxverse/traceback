@@ -1,11 +1,10 @@
 """User model."""
-from datetime import datetime
 
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from ..extensions import db
+from . import Boolean, Column, DateTime, Enum, ForeignKey, Integer, String, utcnow
 from .enums import Role
-from . import Column, Integer, String, Boolean, DateTime, ForeignKey, Enum, utcnow
 
 
 class User(db.Model):

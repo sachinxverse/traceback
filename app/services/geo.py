@@ -2,7 +2,7 @@
 from math import asin, cos, radians, sin, sqrt
 
 
-def haversine_km(lat1, lon1, lat2, lon2):
+def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Great-circle distance in kilometres between two (lat, lng) points."""
     R = 6371.0088
     p1, p2 = radians(lat1), radians(lat2)

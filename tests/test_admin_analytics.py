@@ -1,5 +1,5 @@
 """Admin + analytics tests (F12, F13, Section 14, acceptance A11)."""
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from tests.conftest import auth, login, make_institution, make_staff
 
@@ -54,7 +54,7 @@ def test_summary_on_seeded_like_data(client, app, db):
             "report_type": "LOST" if i % 2 == 0 else "FOUND",
             "category": "KEYS", "title": f"Keys report {i}",
             "description": f"Description of keys report number {i} for testing.",
-            "incident_date": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S"),
+            "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
             "institution_id": str(inst.id),
             **({"custody": "AT_INSTITUTION"} if i % 2 else {})},
             content_type="multipart/form-data")
@@ -85,7 +85,7 @@ def test_heatmap_privacy_threshold(client, app, db):
     client.post("/api/v1/reports", data={
         "report_type": "LOST", "category": "KEYS", "title": "Lonely keys",
         "description": "One single report at a unique location for privacy.",
-        "incident_date": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
         "latitude": "55.5", "longitude": "55.5"},
         content_type="multipart/form-data")
     login(client, "hm@x.com")
@@ -100,7 +100,7 @@ def test_report_moderation_remove_restore(client, app, db):
     r = client.post("/api/v1/reports", data={
         "report_type": "LOST", "category": "KEYS", "title": "To remove",
         "description": "This report will be removed by the moderator soon.",
-        "incident_date": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S")},
+        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S")},
         content_type="multipart/form-data")
     rid = r.get_json()["data"]["id"]
     client.post("/api/v1/auth/logout")

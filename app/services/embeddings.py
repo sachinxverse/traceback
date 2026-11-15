@@ -5,7 +5,6 @@ is a plain dot product. A missing embedding is NULL, never a zero vector.
 """
 import hashlib
 import threading
-from typing import Optional
 
 import numpy as np
 
@@ -18,7 +17,7 @@ def to_blob(vec: np.ndarray) -> bytes:
     return np.asarray(vec, dtype=np.float32).tobytes()
 
 
-def from_blob(blob: Optional[bytes], dim: int) -> Optional[np.ndarray]:
+def from_blob(blob: bytes | None, dim: int) -> np.ndarray | None:
     if blob is None:
         return None
     if len(blob) != dim * 4:  # float32
@@ -56,6 +55,7 @@ class StubEmbedder:
 
     def embed_image(self, data: bytes) -> np.ndarray:
         import io
+
         from PIL import Image
         img = Image.open(io.BytesIO(data)).convert("RGB").resize((8, 8))
         arr = np.asarray(img, dtype=np.float32)  # 8x8x3
@@ -101,8 +101,8 @@ class RealEmbedder:
     def clip(self):
         with self._lock:
             if self._clip is None:
-                import torch
                 import open_clip
+                import torch
                 device = "cuda" if torch.cuda.is_available() else "cpu"
                 model, _, preprocess = open_clip.create_model_and_transforms(
                     self.clip_model_name, pretrained=self.clip_pretrained)
@@ -126,6 +126,7 @@ class RealEmbedder:
 
     def embed_image(self, data: bytes) -> np.ndarray:
         import io
+
         import torch
         from PIL import Image
         model = self.clip
@@ -161,6 +162,6 @@ def get_embedder(app=None):
     return _embedder
 
 
-def reset_embedder():
+def reset_embedder() -> None:
     global _embedder
     _embedder = None

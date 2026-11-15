@@ -1,6 +1,6 @@
 """CLI tests (Section 15.3)."""
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 from tests.conftest import auth, image_file
 
@@ -37,7 +37,7 @@ def test_expire_reports(app, db):
     r = client.post("/api/v1/reports", data={
         "report_type": "LOST", "category": "KEYS", "title": "Old keys",
         "description": "A report that will be expired by the CLI command.",
-        "incident_date": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S")},
+        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S")},
         content_type="multipart/form-data")
     rid = r.get_json()["data"]["id"]
     rep = db.session.get(Report, rid)

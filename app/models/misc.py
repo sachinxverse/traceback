@@ -1,7 +1,19 @@
 """Message, notification, token blocklist, audit log models and claim images."""
 from ..extensions import db
+from . import (
+    Boolean,
+    Column,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    utc_iso,
+    utcnow,
+)
 from .enums import NotificationType
-from . import Column, Integer, String, Text, Boolean, DateTime, ForeignKey, Enum, Index, utcnow, utc_iso
 
 
 class ClaimImage(db.Model):

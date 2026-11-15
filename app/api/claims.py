@@ -4,14 +4,13 @@ from flask import Blueprint, current_app, jsonify, request
 from .. import ApiError
 from ..extensions import db, limiter
 from ..models import Claim, Match, Report, User
-from ..models.enums import (ClaimStatus, MatchStatus, ReportStatus, Role)
+from ..models.enums import ClaimStatus, MatchStatus, ReportStatus, Role
 from ..schemas import DisputeSchema, RejectSchema, ReviewNoteSchema, load_json
-from ._auth import current_user
-from ._paging import page_params, paginated
 from ..services import claims as claim_service
 from ..services import images as image_service
-from ..services.audit import log_action
 from ..services.notifications import notify
+from ._auth import current_user
+from ._paging import page_params, paginated
 
 claims_bp = Blueprint("claims", __name__)  # routes carry full paths
 
@@ -102,8 +101,9 @@ def incoming_claims():
     """Claims the current user may review, scoped in SQL (no full scans)."""
     user = current_user()
     page, per_page = page_params()
-    from ..models.enums import Custody
     from sqlalchemy import and_, or_
+
+    from ..models.enums import Custody
 
     found_report = db.aliased(Report)
     q = (Claim.query.join(found_report, Claim.report_id == found_report.id)

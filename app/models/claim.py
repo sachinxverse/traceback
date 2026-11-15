@@ -1,7 +1,7 @@
 """Claim model and claim proof images."""
 from ..extensions import db
+from . import Column, DateTime, Enum, ForeignKey, Integer, Text, utc_iso, utcnow
 from .enums import ClaimStatus, Custody
-from . import Column, Integer, String, Text, DateTime, ForeignKey, Enum, utcnow, utc_iso
 
 
 class Claim(db.Model):

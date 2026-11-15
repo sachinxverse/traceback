@@ -1,8 +1,20 @@
 """Match model: a scored candidate pairing of a LOST and a FOUND report."""
 from ..extensions import db
+from . import (
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    UniqueConstraint,
+    utc_iso,
+    utcnow,
+)
 from .enums import MatchStatus
-from . import Column, Integer, String, Float, Boolean, DateTime, LargeBinary, \
-    ForeignKey, Enum, JSON, Index, UniqueConstraint, utcnow, utc_iso
 
 
 class Match(db.Model):

@@ -68,10 +68,11 @@
     <h5 class="mb-1"><i class="bi bi-clipboard-check me-2" style="color:var(--blue)"></i>This looks like my item</h5>
     <p class="text-muted small">Provide details only the owner would know. Do not share them publicly.</p>
     <form id="claim-form">
-      <textarea class="form-control mb-3" name="claim_details" rows="4" required minlength="20" maxlength="1500"
+      <label class="form-label small fw-bold" for="claim_details">Proof of ownership (details only you would know) *</label>
+      <textarea class="form-control mb-3" id="claim_details" name="claim_details" rows="4" required minlength="20" maxlength="1500"
         placeholder="Serial numbers, scratches, exact contents, lock-screen details, receipts…"></textarea>
       <div class="mb-3">
-        <label class="form-label small fw-bold">Optional proof photos (up to 2)</label>
+        <label class="form-label small fw-bold" for="proof_images">Optional proof photos (up to 2)</label>
         <input type="file" id="proof_images" accept=".jpg,.jpeg,.png,.webp" multiple class="form-control">
       </div>
       <button class="btn btn-primary" type="submit"><i class="bi bi-send me-1"></i>Submit claim</button>
@@ -100,7 +101,7 @@
     <div id="messages" class="chat-panel mb-3 d-flex flex-column"></div>
     <form id="message-form" class="input-group">
       <input class="form-control" id="message-input" maxlength="1000" placeholder="Type a message…" autocomplete="off">
-      <button class="btn btn-primary" type="submit"><i class="bi bi-send"></i></button>
+      <button class="btn btn-primary" type="submit" aria-label="Send message"><i class="bi bi-send" aria-hidden="true"></i></button>
     </form>
     <div id="contact-warning" class="alert alert-warning py-1 px-2 mt-2 d-none small">
       <i class="bi bi-exclamation-triangle me-1"></i>This looks like a phone number or email. Sharing contact info here is not needed — keep it in-app.</div>

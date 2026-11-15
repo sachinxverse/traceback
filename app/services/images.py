@@ -1,13 +1,13 @@
 """Image upload pipeline (Section 8)."""
 import io
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from PIL import Image, ImageOps
 
 from .. import ApiError
 from ..extensions import db
-from ..models import ReportImage, ClaimImage
+from ..models import ClaimImage, ReportImage
 
 ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 MIN_DIMENSION = 100
@@ -39,7 +39,7 @@ def validate_and_process(data: bytes, filename: str, max_mb: int = 5) -> dict:
     try:
         img = Image.open(io.BytesIO(data))
         img.verify()
-    except Exception:
+    except Exception:  # noqa: BLE001 - any decode failure means invalid image
         raise ApiError("BAD_REQUEST", "Not a valid image file", status=400)
 
     try:
@@ -61,7 +61,7 @@ def validate_and_process(data: bytes, filename: str, max_mb: int = 5) -> dict:
         out = buf.getvalue()
     except ApiError:
         raise
-    except Exception:
+    except Exception:  # noqa: BLE001 - normalise any processing failure
         raise ApiError("BAD_REQUEST", "Could not process image", status=400)
 
     processed = Image.open(io.BytesIO(out))
@@ -75,11 +75,12 @@ def validate_and_process(data: bytes, filename: str, max_mb: int = 5) -> dict:
 
 
 def make_storage_key() -> str:
-    now = datetime.utcnow()
+    now = datetime.now(UTC).replace(tzinfo=None)
     return f"{now:%Y}/{now:%m}/{uuid.uuid4()}.jpg"
 
 
-def save_report_images(report, files, existing_count=0, max_images=4, max_mb=5):
+def save_report_images(report, files, existing_count: int = 0,
+                       max_images: int = 4, max_mb: int = 5) -> None:
     """Validate, process and persist uploaded image files for a report.
 
     Returns the list of created ReportImage rows. Raises ApiError on any
@@ -115,7 +116,8 @@ def save_report_images(report, files, existing_count=0, max_images=4, max_mb=5):
     return created
 
 
-def save_claim_images(claim, files, max_images=2, max_mb=5):
+def save_claim_images(claim, files, max_images: int = 2,
+                      max_mb: int = 5) -> None:
     """Validate, process and persist proof images for a claim."""
     from ..services.storage import get_storage
     if len(files) > max_images:

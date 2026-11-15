@@ -1,18 +1,23 @@
 """Report endpoints (Section 7.4)."""
-import io
 
 from flask import Blueprint, current_app, jsonify, request
 
 from .. import ApiError
 from ..extensions import db, limiter
 from ..models import Match, Report, ReportImage
-from ..models.enums import (Category, Custody, MatchStatus, ProcessingStatus,
-                            ReportStatus, ReportType)
+from ..models.enums import (
+    Category,
+    Custody,
+    MatchStatus,
+    ProcessingStatus,
+    ReportStatus,
+    ReportType,
+)
 from ..schemas import ReportCreateSchema, ReportUpdateSchema, load_json
-from ._auth import current_user, get_report_or_404
-from ._paging import page_params, paginated
 from ..services import images as image_service
 from ..services.jobs import enqueue_report_processing
+from ._auth import current_user, get_report_or_404
+from ._paging import page_params, paginated
 
 reports_bp = Blueprint("reports", __name__, url_prefix="/reports")
 
@@ -128,7 +133,7 @@ def _match_stats(report):
 @reports_bp.get("/browse")
 def browse():
     """Authenticated browse of ACTIVE found reports (public fields only)."""
-    user = current_user()
+    current_user()  # auth guard
     page = max(int(request.args.get("page", 1)), 1)
     per_page = min(max(int(request.args.get("per_page", 20)), 1), 100)
     q = Report.query.filter(Report.report_type == ReportType.FOUND,
@@ -231,7 +236,7 @@ def _matches_of(report):
     return Match.query.filter(Match.found_report_id == report.id).all()
 
 
-from ..models.enums import ClaimStatus  # noqa: E402  (used in close_report)
+from ..models.enums import ClaimStatus
 
 
 @reports_bp.post("/<int:report_id>/images")

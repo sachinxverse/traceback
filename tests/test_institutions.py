@@ -1,5 +1,5 @@
 """Institution tests (F11, Section 13, acceptance A9, A10)."""
-from datetime import datetime
+from datetime import datetime, timezone
 
 from tests.conftest import auth, login, make_institution, make_staff
 
@@ -82,7 +82,7 @@ def test_staff_sees_only_own_institution(client, db):
     r = client.post("/api/v1/reports", data={
         "report_type": "FOUND", "category": "BAGS", "title": "Found bag",
         "description": "A bag was found on the premises of institution B.",
-        "incident_date": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
         "institution_id": str(inst2.id), "custody": "AT_INSTITUTION"},
         content_type="multipart/form-data")
     rid = r.get_json()["data"]["id"]

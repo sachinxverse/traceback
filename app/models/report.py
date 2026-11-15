@@ -1,8 +1,19 @@
 """Report model (LOST or FOUND) and report image."""
 from ..extensions import db
+from . import (
+    Column,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Integer,
+    LargeBinary,
+    String,
+    Text,
+    utc_iso,
+    utcnow,
+)
 from .enums import Category, Custody, ProcessingStatus, ReportStatus, ReportType
-from . import Column, Integer, String, Text, Float, Boolean, DateTime, LargeBinary, \
-    ForeignKey, Enum, DateTime as _DT, utcnow, utc_iso
 
 
 class Report(db.Model):

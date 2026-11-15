@@ -2,7 +2,7 @@
 import io
 import sys
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from flask.testing import FlaskClient
@@ -120,7 +120,7 @@ def create_report(client, report_type="LOST", category="WALLETS_CARDS",
         "category": category,
         "title": title or f"{report_type.title()} {category} item",
         "description": description or "A detailed description of the item for matching purposes.",
-        "incident_date": (datetime.utcnow() - timedelta(days=days_ago)).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days_ago)).strftime("%Y-%m-%dT%H:%M:%S"),
     }
     if lat is not None:
         data["latitude"] = str(lat)
@@ -152,7 +152,7 @@ def create_report_with_images(client, report_type, images_spec, **kwargs):
         "category": kwargs.get("category", "WALLETS_CARDS"),
         "title": kwargs.get("title", f"{report_type.title()} test item"),
         "description": kwargs.get("description", "A detailed description for the test item."),
-        "incident_date": (datetime.utcnow() - timedelta(days=kwargs.get("days_ago", 1))).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=kwargs.get("days_ago", 1))).strftime("%Y-%m-%dT%H:%M:%S"),
     }
     if kwargs.get("lat") is not None:
         data["latitude"] = str(kwargs["lat"])

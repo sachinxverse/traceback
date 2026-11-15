@@ -1,5 +1,5 @@
 """Visibility / privacy tests (F14, Section 6, acceptance A8)."""
-from datetime import datetime
+from datetime import datetime, timezone
 
 from tests.conftest import auth, register, login
 
@@ -10,7 +10,7 @@ def _mkreport(client, report_type="LOST", private="My locker number is 42.",
         "report_type": report_type, "category": category,
         "title": title,
         "description": "Description text that is long enough for validation.",
-        "incident_date": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
         "private_details": private}
     if custody:
         payload["custody"] = custody
@@ -56,7 +56,7 @@ def test_image_authorisation(client, db):
     r = client.post("/api/v1/reports", data={
         "report_type": "LOST", "category": "BAGS",
         "title": "Lost bag", "description": "A brown leather bag lost in the cafeteria.",
-        "incident_date": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
         "images": _img()},
         content_type="multipart/form-data")
     report = r.get_json()["data"]
@@ -105,7 +105,7 @@ def test_staff_scope_limited_to_own_institution(client, db):
     r = client.post("/api/v1/reports", data={
         "report_type": "FOUND", "category": "BAGS", "title": "Found bag",
         "description": "A bag found somewhere on the premises of inst one.",
-        "incident_date": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": datetime.now(timezone.utc).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S"),
         "institution_id": str(inst1.id), "custody": "AT_INSTITUTION"},
         content_type="multipart/form-data")
     rid = r.get_json()["data"]["id"]

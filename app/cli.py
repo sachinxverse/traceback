@@ -1,6 +1,5 @@
 """Flask CLI commands (Section 15.3)."""
-import getpass
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 import click
 
@@ -58,11 +57,12 @@ def register(app):
     @app.cli.command("expire-reports")
     def expire_reports():
         """ACTIVE reports older than REPORT_RETENTION_DAYS -> EXPIRED."""
-        from app.extensions import db
-        from app.models import Report, Match
-        from app.models.enums import MatchStatus, ReportStatus
         from datetime import datetime
-        cutoff = datetime.utcnow() - timedelta(days=app.config["REPORT_RETENTION_DAYS"])
+
+        from app.extensions import db
+        from app.models import Match, Report
+        from app.models.enums import MatchStatus, ReportStatus
+        cutoff = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=app.config["REPORT_RETENTION_DAYS"])
         with app.app_context():
             old = Report.query.filter(Report.status == ReportStatus.ACTIVE,
                                       Report.created_at < cutoff).all()
@@ -79,11 +79,9 @@ def register(app):
     def purge_orphans():
         """Delete upload files not referenced by any DB row."""
         import os
-        from app.extensions import db
-        from app.models import ReportImage, ClaimImage
-        from app.services.storage import get_storage
+
+        from app.models import ClaimImage, ReportImage
         with app.app_context():
-            storage = get_storage(app)
             referenced = {i.storage_key for i in ReportImage.query.all()}
             referenced |= {i.storage_key for i in ClaimImage.query.all()}
             root = app.config["UPLOAD_DIR"]
@@ -104,9 +102,9 @@ def register(app):
     def purge_old_messages():
         """Delete messages on completed claims older than 30 days."""
         from app.extensions import db
-        from app.models import Message, Claim, Match
+        from app.models import Claim, Message
         from app.models.enums import ClaimStatus
-        cutoff = datetime.utcnow() - timedelta(days=30)
+        cutoff = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=30)
         with app.app_context():
             match_ids = [c.match_id for c in Claim.query.filter(
                 Claim.verification_status == ClaimStatus.COMPLETED).all()]
@@ -121,7 +119,7 @@ def register(app):
         """Delete expired blocklist rows (older than the refresh lifetime)."""
         from app.extensions import db
         from app.models import TokenBlocklist
-        cutoff = datetime.utcnow() - timedelta(days=14)
+        cutoff = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=14)
         with app.app_context():
             n = TokenBlocklist.query.filter(TokenBlocklist.revoked_at < cutoff).delete()
             db.session.commit()
@@ -130,9 +128,19 @@ def register(app):
 
 def wipe(db):
     """Delete all rows in dependency order (demo --reset)."""
-    from app.models import (AuditLog, Claim, ClaimImage, Institution, Match,
-                            Message, Notification, Report, ReportImage,
-                            TokenBlocklist, User)
+    from app.models import (
+        AuditLog,
+        Claim,
+        ClaimImage,
+        Institution,
+        Match,
+        Message,
+        Notification,
+        Report,
+        ReportImage,
+        TokenBlocklist,
+        User,
+    )
     for model in (ClaimImage, Message, Notification, Claim, Match, ReportImage,
                   Report, TokenBlocklist, AuditLog, User, Institution):
         model.query.delete()

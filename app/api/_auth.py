@@ -5,8 +5,8 @@ from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
 
 from .. import ApiError
 from ..extensions import db
-from ..models import User, Report
-from ..models.enums import Custody, ReportStatus, Role
+from ..models import Report, User
+from ..models.enums import Role
 
 
 def current_user() -> User:
@@ -85,13 +85,10 @@ def can_participate_in_match(user, match) -> bool:
         return False
     if user.role == Role.ADMIN:
         return True
-    if match.lost_report.user_id == user.id:
-        return True
-    if match.found_report.user_id == user.id:
-        return True
-    if user.role == Role.STAFF and user.institution_id == match.found_report.institution_id:
-        return True
-    return False
+    return (match.lost_report.user_id == user.id
+            or match.found_report.user_id == user.id
+            or (user.role == Role.STAFF
+                and user.institution_id == match.found_report.institution_id))
 
 
 def messaging_allowed(match) -> bool:

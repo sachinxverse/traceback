@@ -54,7 +54,7 @@ def _pair(client, lost_email="owner@test.com", found_email="finder@test.com",
         "report_type": "LOST", "category": "WALLETS_CARDS",
         "title": "Lost brown wallet",
         "description": desc,
-        "incident_date": (datetime.utcnow() - timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=2)).strftime("%Y-%m-%dT%H:%M:%S"),
         "private_details": "Initials J.K.",
         "images": _img()}, content_type="multipart/form-data")
     lost_id = r.get_json()["data"]["id"]
@@ -65,7 +65,7 @@ def _pair(client, lost_email="owner@test.com", found_email="finder@test.com",
         "report_type": "FOUND", "category": "WALLETS_CARDS",
         "title": "Brown wallet found",
         "description": "A brown leather wallet was found near the fountain area.",
-        "incident_date": (datetime.utcnow() - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%S"),
         "custody": "WITH_FINDER",
         "images": _img()}, content_type="multipart/form-data")
     found_id = r.get_json()["data"]["id"]
@@ -78,7 +78,7 @@ def _lost_report(client, email, name, title, desc, days_ago=3):
     r = client.post("/api/v1/reports", data={
         "report_type": "LOST", "category": "WALLETS_CARDS",
         "title": title, "description": desc,
-        "incident_date": (datetime.utcnow() - timedelta(days=days_ago)).strftime("%Y-%m-%dT%H:%M:%S"),
+        "incident_date": (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days_ago)).strftime("%Y-%m-%dT%H:%M:%S"),
         "images": _img()}, content_type="multipart/form-data")
     assert r.status_code == 201, r.get_data(as_text=True)
     lost_id = r.get_json()["data"]["id"]
@@ -486,7 +486,7 @@ def _seed_claims(db, n=120):
         db.session.commit()
     finder = db.session.query(User).filter_by(email="pagerf@test.com").one()
     from datetime import datetime, timedelta
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     lost = Report(user_id=claimant.id, report_type="LOST", category="WALLETS_CARDS",
                   title="Lost wallet", description="desc", status="ACTIVE",
                   incident_date=now - timedelta(days=2))
@@ -627,3 +627,132 @@ def test_c2_evaluation_reports_both_labels(tmp_path, monkeypatch):
                        timeout=180, cwd=os.path.abspath(os.path.dirname(__file__) + "/.."))
     assert r.returncode == 0, r.stderr
     assert "negative: 0" in r.stdout  # missing reports are skipped
+
+
+# ----------------------------------------------------------------- C4
+def _ratelimit_app():
+    from app import create_app
+    from app.services.embeddings import reset_embedder
+    from app.services import storage as storage_mod
+    reset_embedder()
+    storage_mod.reset_storage()
+    app = create_app("testing", ratelimit_enabled=True)
+    app.test_client_class = __import__("tests.conftest", fromlist=["CsrfClient"]).CsrfClient
+    with app.app_context():
+        db.create_all()
+    return app
+
+
+def test_c4_rate_limits_active_login_register(client=None):
+    app = _ratelimit_app()
+    c = app.test_client()
+    # register: 5/min -> 6th attempt is limited
+    codes = [c.post("/api/v1/auth/register", json={
+        "name": f"U{i}", "email": f"rl{i}@x.com", "password": "Password1"}
+    ).status_code for i in range(7)]
+    assert codes.count(429) >= 1, codes
+    # login: 10/min -> 11th attempt limited
+    codes = [c.post("/api/v1/auth/login", json={
+        "email": "rl-nologin@x.com", "password": "WrongPass1"}).status_code
+        for _ in range(12)]
+    assert 429 in codes
+    app.extensions.pop("login_attempts", None)
+
+
+def test_c4_change_password_rate_limited():
+    app = _ratelimit_app()
+    c = app.test_client()
+    c.post("/api/v1/auth/register", json={
+        "name": "Cp User", "email": "cp@x.com", "password": "Password1"})
+    c.post("/api/v1/auth/login", json={"email": "cp@x.com", "password": "Password1"})
+    codes = [c.post("/api/v1/auth/change-password", json={
+        "current_password": "Password1", "new_password": "Password2"}).status_code
+        for _ in range(7)]
+    assert 429 in codes, codes
+
+
+def test_c4_progressive_lockout_after_failed_logins():
+    app = _ratelimit_app()
+    c = app.test_client()
+    c.post("/api/v1/auth/register", json={
+        "name": "Lock User", "email": "lock@x.com", "password": "Password1"})
+    # 5 wrong passwords -> lockout, even with the CORRECT password
+    for _ in range(5):
+        r = c.post("/api/v1/auth/login", json={
+            "email": "lock@x.com", "password": "WrongPass1"})
+        assert r.status_code == 401
+    r = c.post("/api/v1/auth/login", json={
+        "email": "lock@x.com", "password": "Password1"})
+    assert r.status_code == 429, r.get_data(as_text=True)
+    body = r.get_json()["error"]
+    assert body["code"] == "RATE_LIMITED"
+    assert "retry_after_seconds" in body["details"]
+    # a different email is not affected
+    c.post("/api/v1/auth/register", json={
+        "name": "Ok User", "email": "ok@x.com", "password": "Password1"})
+    r = c.post("/api/v1/auth/login", json={"email": "ok@x.com", "password": "Password1"})
+    assert r.status_code == 200
+
+
+def test_c4_cdn_assets_pinned_with_sri_and_narrow_csp():
+    base = open("app/templates/base.html", encoding="utf-8").read()
+    import re
+    tags = re.findall(r'(?:src|href)="(https://[^"]+)"(?:\s+integrity="([^"]+)")?', base)
+    # font preconnect/css2 URLs have no package version by design; check the
+    # library assets (jsdelivr) for pinning + SRI
+    cdn = [(u, i) for u, i in tags if u.startswith("https://cdn.jsdelivr.net")]
+    assert cdn, "no CDN library assets found"
+    for url, integrity in cdn:
+        assert re.search(r"@\d+\.\d+", url), f"unpinned: {url}"
+        assert integrity.startswith("sha384-"), f"missing SRI: {url}"
+    from app import create_app
+    from app.services.embeddings import reset_embedder
+    from app.services import storage as storage_mod
+    reset_embedder(); storage_mod.reset_storage()
+    app = create_app("testing")
+    with app.test_client().get("/login") as r:
+        csp = r.headers.get("Content-Security-Policy", "")
+        assert "unpkg.com" not in csp
+        assert "https://cdn.jsdelivr.net" in csp
+
+
+def test_c4_escape_html_is_attribute_safe():
+    src = open("app/static/js/claims.js", encoding="utf-8").read()
+    assert "&quot;" in src and "&#39;" in src
+    # no remaining old-style escapeHtml implementations in any JS file
+    import glob
+    for p in glob.glob("app/static/js/*.js"):
+        s = open(p, encoding="utf-8").read()
+        assert "d.textContent = s || '';" not in s, p
+
+
+# ----------------------------------------------------------------- C3
+def test_c3_base_template_landmarks_and_skip_link():
+    base = open("app/templates/base.html", encoding="utf-8").read()
+    assert 'href="#main"' in base and 'Skip to main content' in base
+    assert '<main id="main"' in base
+    assert 'aria-label="Main navigation"' in base
+    # form labels are linked to inputs in the known offenders
+    prof = open("app/templates/pages/profile.html", encoding="utf-8").read()
+    assert 'for="pf-name"' in prof and 'id="pf-name"' in prof
+    assert 'for="pf-phone"' in prof and 'id="pf-phone"' in prof
+    claim = open("app/templates/pages/match_detail.html", encoding="utf-8").read()
+    assert 'for="claim_details"' in claim and 'id="claim_details"' in claim
+    # icon-only buttons carry aria-labels
+    for p in ("app/templates/pages/claim_detail.html",
+              "app/templates/pages/match_detail.html"):
+        s = open(p, encoding="utf-8").read()
+        assert 'aria-label="Send message"' in s, p
+    # score ring is announced to screen readers
+    macros = open("app/templates/macros/ui.html", encoding="utf-8").read()
+    assert 'aria-label="Match score' in macros
+
+
+def test_c3_contrast_variants_in_css():
+    css = open("app/static/css/app.css", encoding="utf-8").read()
+    assert "--amber-deep: #B45309" in css
+    assert "--teal-deep: #0F766E" in css
+    # white-on-amber/teal small elements use the deep variants
+    assert ".btn-amber { background: var(--amber-deep)" in css
+    assert ".btn-teal { background: var(--teal-deep)" in css
+    assert ".badge-lost { background: var(--amber-deep)" in css

@@ -1,19 +1,26 @@
 """Marshmallow schemas for request validation (Section 7.1: unknown fields rejected)."""
 import re
-from datetime import datetime, date
+from datetime import UTC, date, datetime
 
-from marshmallow import Schema, ValidationError, fields, validate, validates, validates_schema, post_load, EXCLUDE
+from marshmallow import (
+    EXCLUDE,
+    Schema,
+    ValidationError,
+    fields,
+    validate,
+    validates,
+    validates_schema,
+)
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 def _not_future(value):
     if isinstance(value, datetime):
-        if value > datetime.utcnow():
+        if value > datetime.now(UTC).replace(tzinfo=None):
             raise ValidationError("Date cannot be in the future.")
-    elif isinstance(value, date):
-        if value > date.today():
-            raise ValidationError("Date cannot be in the future.")
+    elif isinstance(value, date) and value > date.today():
+        raise ValidationError("Date cannot be in the future.")
     return value
 
 

@@ -18,19 +18,20 @@ def evaluate(labels_path, show_pairs=False):
     from app import create_app
     from app.extensions import db
     from app.models import Report
-    from app.services.matching import component_scores, combined_score, _weights
-    from app.services.embeddings import from_blob, IMAGE_DIM, TEXT_DIM
+    from app.services.embeddings import IMAGE_DIM, TEXT_DIM, from_blob
+    from app.services.matching import _weights, combined_score, component_scores
 
     app = create_app(os.environ.get("APP_CONFIG", "development"))
     with app.app_context():
-        rows = list(csv.DictReader(open(labels_path)))
+        with open(labels_path, newline="", encoding="utf-8") as fh:
+            rows = list(csv.DictReader(fh))
         pairs = []
         for row in rows:
             try:
                 lost = db.session.get(Report, int(row["lost_id"]))
                 found = db.session.get(Report, int(row["found_id"]))
-            except Exception:
-                continue  # missing table/DB: skip safely
+            except Exception:  # noqa: BLE001, S112 - missing table/DB: skip safely
+                continue
             if lost is None or found is None:
                 continue
             pairs.append((lost, found,
@@ -59,7 +60,7 @@ def evaluate(labels_path, show_pairs=False):
         for s in scored:
             by_lost.setdefault(s["lost"].id, []).append(s)
         hits1 = hits3 = ranked_lost = 0
-        for lost_id, cands in by_lost.items():
+        for cands in by_lost.values():
             cands = sorted(cands, key=lambda x: -x["total"])
             positives = [c for c in cands if c["label"]]
             if not positives:

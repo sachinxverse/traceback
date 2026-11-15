@@ -28,9 +28,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  const actions = document.getElementById('claim-actions');
-  if (actions && claimId) {
-    actions.querySelectorAll('button[data-action]').forEach(btn =>
+  if (claimId) {
+    // bind every action button on the claim page: the reviewer Decision card
+    // (Approve/Reject) sits OUTSIDE #claim-actions (which only holds the
+    // state-dependent actions) — binding scope-wide fixed dead buttons.
+    document.querySelectorAll('button[data-action]').forEach(btn =>
       btn.addEventListener('click', () => handleAction(btn.dataset.action, btn, claimId)));
     const confirm = document.getElementById('note-confirm');
     confirm?.addEventListener('click', () => {
@@ -110,8 +112,12 @@ function wireMessaging(matchId, form) {
   setInterval(poll, 10000);
 }
 
+// Attribute-safe escape: &, <, >, double and single quotes (review C4).
 function escapeHtml(s) {
-  const d = document.createElement('div');
-  d.textContent = s || '';
-  return d.innerHTML;
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }

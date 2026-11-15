@@ -10,7 +10,7 @@
 
 {% macro score_ring(score, size='lg', label_suffix='%') -%}
 {# score: 0-100 integer #}
-<div class="score-ring ring-{{ size }}">
+<div class="score-ring ring-{{ size }}" role="img" aria-label="Match score {{ score }} out of 100">
   <svg viewBox="0 0 44 44" aria-hidden="true">
     <circle class="ring-track" cx="22" cy="22" r="19" fill="none" stroke-width="4.5"></circle>
     <circle class="ring-fill" cx="22" cy="22" r="19" fill="none" stroke-width="4.5"

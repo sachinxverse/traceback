@@ -1,11 +1,10 @@
 """Authorised image serving (Section 8): files are never public static."""
-import io
 
-from flask import Blueprint, Response, current_app, send_file
+from flask import Blueprint, Response
 
 from .. import ApiError
 from ..models import ClaimImage, ReportImage
-from ._auth import current_user, can_view_claim
+from ._auth import current_user
 
 images_bp = Blueprint("images", __name__, url_prefix="")
 

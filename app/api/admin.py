@@ -4,15 +4,20 @@ from datetime import datetime
 from flask import Blueprint, jsonify, request
 
 from .. import ApiError
-from ..extensions import db, limiter
+from ..extensions import db
 from ..models import AuditLog, Claim, Match, Report, User
-from ..models.enums import (ClaimStatus, MatchStatus, ProcessingStatus,
-                            ReportStatus, Role)
+from ..models.enums import (
+    ClaimStatus,
+    MatchStatus,
+    ProcessingStatus,
+    ReportStatus,
+    Role,
+)
 from ..schemas import AdminUserPatchSchema, RemoveReportSchema, ResolveSchema, load_json
-from ._auth import current_user, roles_required
-from ._paging import page_params, paginated
 from ..services.audit import log_action
 from ..services.notifications import notify
+from ._auth import current_user, roles_required
+from ._paging import page_params, paginated
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -144,7 +149,6 @@ def restore_report(report_id):
 
 
 def _expire_matches(report):
-    cols = [Match.lost_report_id, Match.found_report_id]
     for m in Match.query.filter(
             (Match.lost_report_id == report.id) | (Match.found_report_id == report.id)).all():
         if m.status in (MatchStatus.SUGGESTED, MatchStatus.CLAIMED):

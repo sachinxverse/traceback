@@ -1,7 +1,7 @@
 """Notification service (Section 12): in-app rows plus optional email."""
 import logging
 
-from flask import render_template, current_app
+from flask import current_app, render_template
 
 from ..extensions import db, mail
 from ..models import Notification, User
@@ -10,8 +10,10 @@ from ..models.enums import NotificationType
 log = logging.getLogger("traceback.notifications")
 
 
-def notify(user_id, type_, message, link=None, related_report_id=None,
-           related_match_id=None, related_claim_id=None):
+def notify(user_id: int, type_: str, message: str, link: str | None = None,
+           related_report_id: int | None = None,
+           related_match_id: int | None = None,
+           related_claim_id: int | None = None) -> None:
     """Create an in-app notification row and, when enabled, send an email.
     Email failures must never break the request."""
     n = Notification(

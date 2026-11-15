@@ -15,7 +15,7 @@
       <span style="width:28px;height:28px;border-radius:9px;background:var(--navy);color:#fff" class="d-grid fs-6">1</span>
       <h5 class="mb-0">The item</h5>
     </div>
-    <label class="form-label">Category *</label>
+    <label class="form-label" id="category-label">Category *</label>
     <div class="category-grid mb-3" id="category-grid">
       {% for c in categories %}
       <div class="category-cell" data-value="{{ c }}">{{ c.replace('_',' ').title() }}</div>
@@ -40,7 +40,7 @@
     <input class="form-control mb-3" type="datetime-local" id="incident_date" name="incident_date" required>
 
     {% if report_type == 'found' %}
-    <label class="form-label">Custody *</label>
+    <label class="form-label" id="custody-label">Custody *</label>
     <div class="d-flex gap-3 mb-3">
       <div class="form-check"><input class="form-check-input" type="radio" name="custody" id="custody1" value="WITH_FINDER">
         <label class="form-check-label" for="custody1">I'm keeping it with me</label></div>
@@ -73,9 +73,9 @@
     </div>
     <div id="geocode-results" class="list-group mb-2"></div>
     <div class="row">
-      <div class="col-md-6"><label class="form-label">Latitude</label>
+      <div class="col-md-6"><label class="form-label" for="latitude">Latitude</label>
         <input class="form-control" name="latitude" id="latitude"></div>
-      <div class="col-md-6"><label class="form-label">Longitude</label>
+      <div class="col-md-6"><label class="form-label" for="longitude">Longitude</label>
         <input class="form-control" name="longitude" id="longitude"></div>
     </div>
     <label class="form-label mt-2" for="location_text">Location description</label>
