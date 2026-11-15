@@ -10,6 +10,7 @@ from ..models.enums import (Category, Custody, MatchStatus, ProcessingStatus,
                             ReportStatus, ReportType)
 from ..schemas import ReportCreateSchema, ReportUpdateSchema, load_json
 from ._auth import current_user, get_report_or_404
+from ._paging import page_params, paginated
 from ..services import images as image_service
 from ..services.jobs import enqueue_report_processing
 
@@ -267,6 +268,7 @@ def delete_image(report_id, image_id):
 def report_matches(report_id):
     user = current_user()
     report = get_report_or_404(report_id, user)
+    page, per_page = page_params()
     if report.is_lost:
         q = Match.query.filter(Match.lost_report_id == report.id)
         for_lost = True
@@ -276,8 +278,11 @@ def report_matches(report_id):
         for_lost = False
         dismissed = Match.found_dismissed
     q = q.filter(dismissed.is_(False), Match.status != MatchStatus.EXPIRED)
-    q = q.order_by(Match.total_score.desc())
-    return jsonify({"data": [m.to_dict(for_lost_side=for_lost) for m in q.all()]})
+    q = q.options(db.joinedload(Match.lost_report).joinedload(Report.images),
+                  db.joinedload(Match.found_report).joinedload(Report.images))
+    return jsonify(paginated(q, page, per_page,
+                             lambda m: m.to_dict(for_lost_side=for_lost),
+                             order_by=Match.total_score.desc()))
 
 
 @reports_bp.post("/<int:report_id>/rematch")

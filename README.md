@@ -51,10 +51,23 @@ pytest --cov=app/services --cov=app/api -q   # coverage report
 ### Evaluate the matching engine
 
 ```bash
-python scripts/evaluate_matching.py scripts/labels.csv
+python scripts/evaluate_matching.py scripts/labels.csv --pairs
 # prints precision@1, precision@3, recall@3, false-positive rate at
-# MATCH_MIN_SCORE and a score histogram (exit code 0 always)
+# MATCH_MIN_SCORE, mean positive score and a score histogram (exit code 0)
 ```
+
+Latest numbers on the seeded demo data (21 labelled pairs: 5 positives,
+16 negatives incl. same-category hard distractors, review C2):
+
+| backend | precision@1 | precision@3 | recall@3 | FPR @ 0.45 | mean pos score | pos at MEDIUM/HIGH |
+|---------|------------|-------------|----------|------------|----------------|--------------------|
+| stub    | 1.000      | 1.000       | 1.000    | 0.000      | 0.868          | 5/5                |
+| real    | 1.000      | 1.000       | 1.000    | 0.188      | 0.961          | 5/5                |
+
+The real-backend false positives are wallet-vs-wallet hard negatives (CLIP
+embeddings of different leather wallets are genuinely close); in production
+these are resolved by the claims workflow - a match only notifies, humans
+confirm ownership via claim review.
 
 ## Docker (Postgres + gunicorn)
 
@@ -225,7 +238,7 @@ marks a report RECOVERED** (asserted by `test_claims.py::test_ai_never_auto_appr
 | A12| Messaging participants-only, polling, escaping, rate limiting             | Pass (`test_messages.py`) |
 | A13| Rate limits, CSRF, headers, upload validation active and tested           | Pass (`test_security.py`) |
 | A14| `docker compose up --build` web+Postgres, health ok, seed works           | Config provided; validated locally via SQLite |
-| A15| `EMBEDDING_BACKEND=real` uses OpenCLIP + Sentence Transformers             | Implemented (`services/embeddings.py`); evaluation script provided |
+| A15| `EMBEDDING_BACKEND=real` uses OpenCLIP + Sentence Transformers             | Implemented (`services/embeddings.py`); eval: precision@1=1.000, recall@3=1.000, FPR=0.188 (hard wallet negatives), mean pos 0.961, 5/5 MEDIUM/HIGH |
 | A16| README + `docs/DECISIONS.md` document everything                          | Pass (this file + decisions log) |
 
 Latest local run (Python 3.14, Windows):

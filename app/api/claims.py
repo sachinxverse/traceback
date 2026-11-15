@@ -7,6 +7,7 @@ from ..models import Claim, Match, Report, User
 from ..models.enums import (ClaimStatus, MatchStatus, ReportStatus, Role)
 from ..schemas import DisputeSchema, RejectSchema, ReviewNoteSchema, load_json
 from ._auth import current_user
+from ._paging import page_params, paginated
 from ..services import claims as claim_service
 from ..services import images as image_service
 from ..services.audit import log_action
@@ -88,34 +89,43 @@ def submit_claim(match_id):
 @claims_bp.get("/claims/mine")
 def my_claims():
     user = current_user()
-    claims = Claim.query.filter_by(claimant_id=user.id).order_by(Claim.created_at.desc()).all()
-    return jsonify({"data": [c.to_dict(user) for c in claims]})
+    page, per_page = page_params()
+    q = (Claim.query.filter_by(claimant_id=user.id)
+         .options(db.joinedload(Claim.report),
+                  db.joinedload(Claim.match).joinedload(Match.lost_report)))
+    return jsonify(paginated(q, page, per_page, lambda c: c.to_dict(user),
+                             order_by=Claim.created_at.desc()))
 
 
 @claims_bp.get("/claims/incoming")
 def incoming_claims():
+    """Claims the current user may review, scoped in SQL (no full scans)."""
     user = current_user()
+    page, per_page = page_params()
     from ..models.enums import Custody
+    from sqlalchemy import and_, or_
 
-    def _reviewable(claim):
-        found = claim.report
-        if user.role == Role.ADMIN:
-            return True
-        if found.custody == Custody.WITH_FINDER:
-            return found.user_id == user.id
-        return user.is_staff_of(found.institution_id)
-
+    found_report = db.aliased(Report)
+    q = (Claim.query.join(found_report, Claim.report_id == found_report.id)
+         .options(db.joinedload(Claim.report),
+                  db.joinedload(Claim.match).joinedload(Match.lost_report)))
+    if user.role == Role.ADMIN:
+        pass  # admins review everything
+    else:
+        scopes = [and_(found_report.custody == Custody.WITH_FINDER,
+                       found_report.user_id == user.id)]
+        if user.role == Role.STAFF and user.institution_id:
+            scopes.append(found_report.institution_id == user.institution_id)
+        q = q.filter(or_(*scopes))
     status = request.args.get("status")
-    claims = Claim.query.order_by(Claim.created_at.desc()).all()
-    claims = [c for c in claims if _reviewable(c)]
     if status:
         try:
-            wanted = ClaimStatus(status)
+            q = q.filter(Claim.verification_status == ClaimStatus(status))
         except ValueError:
             raise ApiError("VALIDATION_ERROR", "Unknown status",
                            details={"status": ["Unknown status"]})
-        claims = [c for c in claims if c.verification_status == wanted]
-    return jsonify({"data": [c.to_dict(user) for c in claims]})
+    return jsonify(paginated(q, page, per_page, lambda c: c.to_dict(user),
+                             order_by=Claim.created_at.desc()))
 
 
 @claims_bp.get("/claims/<int:claim_id>")

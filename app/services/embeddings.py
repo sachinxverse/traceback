@@ -40,8 +40,10 @@ class StubEmbedder:
 
     Text: hashed bag-of-words into TEXT_DIM dims (token -> md5 mod dim),
     counts, L2-normalised. Similar wording yields high cosine similarity.
-    Image: 512-d projection of an 8x8x3 colour histogram (resize to 8x8,
-    flatten, repeat/pad to 512, normalise). Identical images score 1.0.
+    Image: 512-d projection of an 8x8x3 colour block PLUS a strong border
+    colour signature (4 one-hot bins per RGB channel) so that items of
+    different colour no longer look near-identical (review C2: the bright
+    label box used to dominate the cosine). Identical images score 1.0.
     """
 
     def embed_text(self, text: str) -> np.ndarray:
@@ -56,15 +58,25 @@ class StubEmbedder:
         import io
         from PIL import Image
         img = Image.open(io.BytesIO(data)).convert("RGB").resize((8, 8))
-        arr = np.asarray(img, dtype=np.float32).flatten()  # 8*8*3 = 192
-        # repeat to reach 512 dims, then pad with zeros
+        arr = np.asarray(img, dtype=np.float32)  # 8x8x3
+        raw = (arr.flatten() / 255.0) * 0.5      # 192 dims, muted weight
+        # border colour signature: mean of the 4 corner patches -> one-hot
+        # bins (4 per channel), strongly weighted so colour drives similarity
+        corners = np.concatenate([
+            arr[:2, :2].reshape(-1, 3), arr[:2, -2:].reshape(-1, 3),
+            arr[-2:, :2].reshape(-1, 3), arr[-2:, -2:].reshape(-1, 3)])
+        border = corners.mean(axis=0)
+        sig = np.zeros(12, dtype=np.float32)
+        for ch in range(3):
+            sig[ch * 4 + min(int(border[ch] // 64), 3)] = 2.5
+        base = np.concatenate([raw, sig])        # 204 dims
         vec = np.zeros(IMAGE_DIM, dtype=np.float32)
-        reps = IMAGE_DIM // arr.size
+        reps = IMAGE_DIM // base.size
         filled = 0
         for _ in range(reps):
-            vec[filled:filled + arr.size] = arr
-            filled += arr.size
-        vec[filled:filled + (IMAGE_DIM - filled)] = arr[:IMAGE_DIM - filled]
+            vec[filled:filled + base.size] = base
+            filled += base.size
+        vec[filled:filled + (IMAGE_DIM - filled)] = base[:IMAGE_DIM - filled]
         return l2normalise(vec)
 
 

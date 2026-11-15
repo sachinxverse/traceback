@@ -28,63 +28,79 @@ DEMO_INSTITUTIONS = [
      "Rajpur Road, Dehradun", 30.3782, 78.0762),
 ]
 
-# (kind, category, title, description, private_details, days_ago, lat, lng, loc_text, inst_idx, custody, colour, label)
+# (kind, category, title, description, private_details, days_ago, lat, lng, loc_text, inst_idx, custody, colour, label, pair_key)
+# pair_key: same key on a lost+found report = SAME object (positive label).
+# Unique 'neg-*' keys mark hard/easy distractors (all their pairs are negative).
 DEMOS = [
+    # kind, category, title, description, private_details, days_ago, lat, lng,
+    # loc_text, inst_idx, custody, colour, image_label, pair_key
+    # pair_key: lost+found sharing a key = SAME object (positive label).
+    # Unique "neg-*" keys = distractors (every pair is a negative label).
     ("lost", "WALLETS_CARDS", "Blue leather wallet lost near library",
      "Lost my blue leather wallet somewhere around the library lawn. Contains student ID and some cash.",
      "Blue two-fold leather wallet, chip in left pocket, initials A.R. inside", 3, 30.4149, 77.9800,
-     "Library lawn", 0, None, "royalblue", "WALLET"),
+     "Library lawn", 0, None, "midnightblue", "WALLET", "pair-wallet-blue"),
     ("found", "WALLETS_CARDS", "Blue wallet handed in at library desk",
      "Found a blue leather wallet on a bench near the library. Has an ID card inside, kept safe at the desk.",
      "Two-fold blue wallet with initials inside", 2, 30.4151, 77.9801, "Library bench", 0,
-     "AT_INSTITUTION", "royalblue", "WALLET"),
+     "AT_INSTITUTION", "midnightblue", "WALLET", "pair-wallet-blue"),
 
     ("lost", "ELECTRONICS", "Black wireless earbuds case lost at station",
      "I dropped my small black wireless earbuds charging case on the platform yesterday evening.",
      "Earbuds case with a scratch on the lid and a star sticker", 10, 30.3150, 78.0325,
-     "Platform 2", 1, None, "black", "EARBUDS"),
+     "Platform 2", 1, None, "black", "EARBUDS", "pair-earbuds"),
     ("found", "ELECTRONICS", "Black earbuds case found on platform",
      "A black earbuds charging case was found on platform 2 yesterday night, handed to the enquiry office.",
      "Star sticker on the lid", 9, 30.3152, 78.0326, "Enquiry office", 1, "AT_INSTITUTION",
-     "black", "EARBUDS"),
+     "black", "EARBUDS", "pair-earbuds"),
 
     ("lost", "BOTTLES_LUNCHBOXES", "Steel water bottle lost in classroom",
      "Left my silver steel water bottle in room 204 after the afternoon lecture.",
      "Bottle has a dent and name tape inside cap", 5, 30.4140, 77.9790, "Room 204, academic block",
-     0, None, "silver", "BOTTLE"),
+     0, None, "silver", "BOTTLE", "pair-bottle"),
     ("found", "BOTTLES_LUNCHBOXES", "Steel bottle handed to office",
      "A silver steel water bottle was left in a classroom and given to the department office.",
      "Dent near the bottom", 4, 30.4138, 77.9792, "Department office", 0, "AT_INSTITUTION",
-     "silver", "BOTTLE"),
+     "silver", "BOTTLE", "pair-bottle"),
 
     ("lost", "KEYS", "Key bunch with red fob lost in mall",
      "Dropped my key bunch (two keys, red round fob) somewhere in the mall food court.",
      "Red silicone fob shaped like a heart", 7, 30.3780, 78.0760, "Food court, second floor",
-     2, None, "red", "KEYS"),
+     2, None, "red", "KEYS", "pair-keys"),
     ("found", "KEYS", "Keys with red fob at mall info desk",
      "Found a bunch of two keys with a red heart-shaped fob in the food court, deposited at info desk.",
-     None, 6, 30.3781, 78.0761, "Information desk", 2, "AT_INSTITUTION", "red", "KEYS"),
+     None, 6, 30.3781, 78.0761, "Information desk", 2, "AT_INSTITUTION", "red", "KEYS", "pair-keys"),
 
     ("lost", "CLOTHING", "Grey hoodie left at railway waiting room",
      "Forgot my grey hoodie in the upper-class waiting room at Dehradun station.",
-     "Small tear on left cuff", 15, 30.3155, 78.0330, "Waiting room", 1, None, "gray", "HOODIE"),
+     "Small tear on left cuff", 15, 30.3155, 78.0330, "Waiting room", 1, None, "gray", "HOODIE", "pair-hoodie"),
     ("found", "CLOTHING", "Grey hoodie in waiting room",
      "A grey hooded sweatshirt was found draped over a chair in the waiting room and kept with the attendant.",
-     None, 14, 30.3156, 78.0331, "Attendant counter", 1, "AT_INSTITUTION", "gray", "HOODIE"),
+     None, 14, 30.3156, 78.0331, "Attendant counter", 1, "AT_INSTITUTION", "gray", "HOODIE", "pair-hoodie"),
 
-    # distractors (unrelated pairs / unmatched)
+    # C2 hard distractors: same category, DIFFERENT items (labelled negative)
+    ("lost", "WALLETS_CARDS", "Red canvas wallet lost at market",
+     "Lost my red canvas wallet at Paltan bazaar market on Saturday evening.",
+     "Red canvas wallet, button closure", 9, 30.3165, 78.0350, "Paltan bazaar",
+     1, None, "red", "WALLET2", "neg-wallet-red"),
+    ("found", "WALLETS_CARDS", "Brown leather wallet found at canteen",
+     "A small brown leather wallet was found under a canteen table and handed in.",
+     None, 11, 30.4136, 77.9789, "Canteen", 0, "AT_INSTITUTION", "brown", "WALLET3",
+     "neg-wallet-brown"),
+
+    # unmatched singles: every pair involving them is a negative
     ("lost", "SPORTS", "Tennis racket cover missing",
      "Misplaced my tennis racket cover bag near the mall entrance, black cover with white stripes.",
-     None, 8, 30.3779, 78.0759, "Entrance", 2, None, "white", "RACKET"),
+     None, 8, 30.3779, 78.0759, "Entrance", 2, None, "white", "RACKET", "neg-racket"),
     ("found", "BOOKS_STATIONERY", "Quantum physics textbook found",
      "A thick quantum mechanics textbook was found in the canteen and handed over.",
-     None, 12, 30.4135, 77.9788, "Canteen", 0, "AT_INSTITUTION", "green", "BOOK"),
+     None, 12, 30.4135, 77.9788, "Canteen", 0, "AT_INSTITUTION", "green", "BOOK", "neg-book"),
     ("found", "SPORTS", "Cricket ball found on field",
      "A red cricket ball was found on the ground after practice.",
-     None, 20, 30.4130, 77.9780, "Sports ground", 0, "AT_INSTITUTION", "red", "BALL"),
+     None, 20, 30.4130, 77.9780, "Sports ground", 0, "AT_INSTITUTION", "red", "BALL", "neg-ball"),
     ("lost", "DOCUMENTS_ID", "Bus pass lost downtown",
      "Lost my bus pass wallet folder near the bus stand, yellow folder.",
-     None, 25, 30.3200, 78.0400, "Bus stand", 1, None, "yellow", "PASS"),
+     None, 25, 30.3200, 78.0400, "Bus stand", 1, None, "yellow", "PASS", "neg-pass"),
 ]
 
 
@@ -132,7 +148,7 @@ def run_seed(app):
     storage = get_storage(app)
     reports = []
     for (kind, category, title, desc, private, days_ago, lat, lng, loc,
-         inst_idx, custody, colour, label) in DEMOS:
+         inst_idx, custody, colour, label, pair_key) in DEMOS:
         owner = users[2 + (len(reports) % 3)]  # alice/bob/carol rotate
         r = Report(
             user_id=owner.id,
@@ -165,26 +181,34 @@ def run_seed(app):
     for r in reports:
         process_report(r.id)
 
-    # write labelled pairs for scripts/evaluate_matching.py
+    # write labelled pairs for scripts/evaluate_matching.py (C2): positives
+    # come from the explicit pair_key; negatives are every other LOST x FOUND
+    # combination within the same category (hard distractors) plus a sample of
+    # cross-category combinations (easy negatives).
     import csv
     import os
-    pairs_by_category = {}
-    for r in reports:
-        pairs_by_category.setdefault(r.category.value, []).append(r)
     labels_path = os.path.join(os.path.dirname(__file__), "labels.csv")
+    key_of = {}
+    for (kind, category, title, desc, private, days_ago, lat, lng, loc,
+         inst_idx, custody, colour, label, pair_key) in DEMOS:
+        key_of[title] = pair_key
     with open(labels_path, "w", newline="") as fh:
         writer = csv.writer(fh)
         writer.writerow(["lost_id", "found_id", "is_same_item"])
-        for cat, rs in sorted(pairs_by_category.items()):
-            losts = [r for r in rs if r.report_type == ReportType.LOST]
-            founds = [r for r in rs if r.report_type == ReportType.FOUND]
-            for i, l in enumerate(losts):
-                if i < len(founds):
-                    # true pair (same object)
-                    writer.writerow([l.id, founds[i].id, 1])
-                for j, f in enumerate(founds):
-                    if j != i:
-                        writer.writerow([l.id, f.id, 0])
+        losts = [r for r in reports if r.report_type == ReportType.LOST]
+        founds = [r for r in reports if r.report_type == ReportType.FOUND]
+        n_easy = 0
+        for l in losts:
+            for f in founds:
+                same_item = key_of[l.title] == key_of[f.title]
+                same_cat = l.category == f.category
+                if same_item:
+                    writer.writerow([l.id, f.id, 1])
+                elif same_cat:
+                    writer.writerow([l.id, f.id, 0])  # hard negative
+                elif n_easy < 12:  # cap easy cross-category negatives
+                    writer.writerow([l.id, f.id, 0])
+                    n_easy += 1
 
     _create_sample_claims(reports, users, created)
     db.session.commit()

@@ -10,6 +10,7 @@ from ..models.enums import (ClaimStatus, MatchStatus, ProcessingStatus,
                             ReportStatus, Role)
 from ..schemas import AdminUserPatchSchema, RemoveReportSchema, ResolveSchema, load_json
 from ._auth import current_user, roles_required
+from ._paging import page_params, paginated
 from ..services.audit import log_action
 from ..services.notifications import notify
 
@@ -160,12 +161,15 @@ def admin_claims():
         wanted = ClaimStatus(status)
     except ValueError:
         raise ApiError("VALIDATION_ERROR", "Unknown status", details={"status": ["Unknown status"]})
-    claims = Claim.query.filter(Claim.verification_status == wanted).all()
+    page, per_page = page_params()
+    q = (Claim.query.filter(Claim.verification_status == wanted)
+         .options(db.joinedload(Claim.report),
+                  db.joinedload(Claim.match).joinedload(Match.lost_report)))
     if user.role == Role.STAFF:
-        claims = [c for c in claims
-                  if c.report.institution_id == user.institution_id]
-    claims.sort(key=lambda c: c.created_at, reverse=True)
-    return jsonify({"data": [c.to_dict(user) for c in claims]})
+        q = q.join(Report, Claim.report_id == Report.id).filter(
+            Report.institution_id == user.institution_id)
+    return jsonify(paginated(q, page, per_page, lambda c: c.to_dict(user),
+                             order_by=Claim.created_at.desc()))
 
 
 @admin_bp.post("/claims/<int:claim_id>/resolve")
@@ -196,16 +200,14 @@ def resolve_claim(claim_id):
 @roles_required(Role.ADMIN, Role.STAFF)
 def recoveries():
     user = current_user()
-    claims = Claim.query.filter(Claim.verification_status == ClaimStatus.COMPLETED).all()
-    if user.role == Role.STAFF:
-        claims = [c for c in claims if c.report.institution_id == user.institution_id]
-    data = []
-    for c in claims:
+    page, per_page = page_params()
+
+    def _serialize(c):
         duration_hours = None
         if c.received_confirmed_at and c.created_at:
             duration_hours = round(
                 (c.received_confirmed_at - c.created_at).total_seconds() / 3600, 2)
-        data.append({
+        return {
             "claim_id": c.id,
             "match_id": c.match_id,
             "found_report_id": c.report_id,
@@ -216,8 +218,16 @@ def recoveries():
             "received_confirmed_at": c.received_confirmed_at.isoformat() + "Z"
             if c.received_confirmed_at else None,
             "duration_hours": duration_hours,
-        })
-    return jsonify({"data": data})
+        }
+
+    q = (Claim.query.filter(Claim.verification_status == ClaimStatus.COMPLETED)
+         .options(db.joinedload(Claim.report),
+                  db.joinedload(Claim.match).joinedload(Match.lost_report)))
+    if user.role == Role.STAFF:
+        q = q.join(Report, Claim.report_id == Report.id).filter(
+            Report.institution_id == user.institution_id)
+    return jsonify(paginated(q, page, per_page, _serialize,
+                             order_by=Claim.created_at.desc()))
 
 
 @admin_bp.get("/audit-logs")

@@ -1,9 +1,10 @@
-"""Matching evaluation script (Section 9.8).
+"""Matching evaluation harness (Section 9.8, review C2).
 
 Reads a CSV of labelled pairs (lost_id, found_id, is_same_item) - the seeded
-demo data ships labels in scripts/labels.csv - runs the scoring for all pairs
-and prints precision@1, precision@3, recall@3, false-positive rate at the
-MATCH_MIN_SCORE threshold, and a score histogram. Always exits 0.
+demo data ships labels in scripts/labels.csv - scores every pair and prints:
+precision@1, precision@3, recall@3, false-positive rate at MATCH_MIN_SCORE,
+mean positive score and a score histogram. --pairs prints the per-pair table.
+Always exits 0.
 """
 import csv
 import os
@@ -13,12 +14,11 @@ from collections import Counter
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
-def evaluate(labels_path):
+def evaluate(labels_path, show_pairs=False):
     from app import create_app
     from app.extensions import db
     from app.models import Report
-    from app.services.matching import (component_scores, combined_score,
-                                       _weights)
+    from app.services.matching import component_scores, combined_score, _weights
     from app.services.embeddings import from_blob, IMAGE_DIM, TEXT_DIM
 
     app = create_app(os.environ.get("APP_CONFIG", "development"))
@@ -26,11 +26,15 @@ def evaluate(labels_path):
         rows = list(csv.DictReader(open(labels_path)))
         pairs = []
         for row in rows:
-            lost = db.session.get(Report, int(row["lost_id"]))
-            found = db.session.get(Report, int(row["found_id"]))
+            try:
+                lost = db.session.get(Report, int(row["lost_id"]))
+                found = db.session.get(Report, int(row["found_id"]))
+            except Exception:
+                continue  # missing table/DB: skip safely
             if lost is None or found is None:
                 continue
-            pairs.append((lost, found, row["is_same_item"].strip().lower() in ("1", "true", "yes")))
+            pairs.append((lost, found,
+                          row["is_same_item"].strip().lower() in ("1", "true", "yes")))
 
         scored = []
         for lost, found, label in pairs:
@@ -42,31 +46,60 @@ def evaluate(labels_path):
             imgc = [v for v in imgc if v is not None]
             scores = component_scores(lost, found, textr, textc, imgr, imgc)
             total, _ = combined_score(scores, _weights(app))
-            scored.append((total or 0.0, label))
+            scored.append({"lost": lost, "found": found, "label": label,
+                           "components": scores, "total": total or 0.0})
 
         min_score = app.config["MATCH_MIN_SCORE"]
-        pos = [s for s, l in scored if l]
-        neg = [s for s, l in scored if not l]
+        notify_score = app.config["NOTIFY_MIN_SCORE"]
+        pos = [s for s in scored if s["label"]]
+        neg = [s for s in scored if not s["label"]]
 
-        # precision@k on ranked positives assuming a candidate pool per lost item
-        ranked = sorted(scored, key=lambda x: -x[0])
-        def precision_at(k):
-            top = [l for _, l in ranked[:k]]
-            return (sum(top) / k) if k else 0.0
-        recall3 = (sum(l for _, l in ranked[:3]) / len(pos)) if pos else 0.0
-        fpr = (sum(1 for s in neg if s >= min_score) / len(neg)) if neg else 0.0
+        # per-lost-item ranking: positives must win their own candidate pool
+        by_lost = {}
+        for s in scored:
+            by_lost.setdefault(s["lost"].id, []).append(s)
+        hits1 = hits3 = ranked_lost = 0
+        for lost_id, cands in by_lost.items():
+            cands = sorted(cands, key=lambda x: -x["total"])
+            positives = [c for c in cands if c["label"]]
+            if not positives:
+                continue
+            ranked_lost += 1
+            if cands[0]["label"]:
+                hits1 += 1
+            if any(c["label"] for c in cands[:3]):
+                hits3 += 1
+        precision_at_1 = hits1 / ranked_lost if ranked_lost else 0.0
+        precision_at_3 = hits3 / ranked_lost if ranked_lost else 0.0
+        recall_at_3 = precision_at_3  # one true pair per ranked lost item
+        fpr = (sum(1 for s in neg if s["total"] >= min_score) / len(neg)) if neg else 0.0
+        mean_pos = (sum(s["total"] for s in pos) / len(pos)) if pos else 0.0
+        medium_or_high = sum(1 for s in pos if s["total"] >= notify_score)
+
+        if show_pairs:
+            print(f"{'lost':>4} {'found':>5} {'label':>5} {'score':>6} "
+                  f"{'img':>5} {'txt':>5} {'loc':>5} {'time':>5}  title")
+            for s in sorted(scored, key=lambda x: -x["total"]):
+                c = s["components"]
+                print(f"{s['lost'].id:>4} {s['found'].id:>5} "
+                      f"{'POS' if s['label'] else 'NEG':>5} {s['total']:>6.3f} "
+                      f"{c['image']:>5.2f} {c['text']:>5.2f} {c['location']:>5.2f} "
+                      f"{c['time']:>5.2f}  {s['lost'].title[:24]} vs {s['found'].title[:24]}")
 
         hist = Counter()
-        for s, _ in scored:
-            bucket = min(int(s * 10), 9)
+        for s in scored:
+            bucket = min(int(s["total"] * 10), 9)
             hist[f"{bucket * 10}-{bucket * 10 + 10}%"] += 1
 
         print(f"Pairs evaluated: {len(scored)} (positive: {len(pos)}, negative: {len(neg)})")
-        print(f"Threshold (MATCH_MIN_SCORE): {min_score}")
-        print(f"precision@1: {precision_at(1):.3f}")
-        print(f"precision@3: {precision_at(3):.3f}")
-        print(f"recall@3:    {recall3:.3f}")
+        print(f"Threshold (MATCH_MIN_SCORE): {min_score}, notify: {notify_score}")
+        print(f"precision@1: {precision_at_1:.3f}")
+        print(f"precision@3: {precision_at_3:.3f}")
+        print(f"recall@3:    {recall_at_3:.3f}")
         print(f"false-positive rate at threshold: {fpr:.3f}")
+        print(f"mean positive score: {mean_pos:.3f}")
+        print(f"positives at MEDIUM/HIGH (>= {notify_score}): "
+              f"{medium_or_high}/{len(pos)}")
         print("score histogram (10% buckets):")
         for bucket in sorted(hist, key=lambda b: int(b.split('-')[0])):
             print(f"  {bucket}: {hist[bucket]}")
@@ -74,6 +107,7 @@ def evaluate(labels_path):
 
 
 if __name__ == "__main__":
-    labels = sys.argv[1] if len(sys.argv) > 1 else os.path.join(
-        os.path.dirname(__file__), "labels.csv")
-    sys.exit(evaluate(labels))
+    labels = sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith("--") \
+        else os.path.join(os.path.dirname(__file__), "labels.csv")
+    show = "--pairs" in sys.argv
+    sys.exit(evaluate(labels, show_pairs=show))

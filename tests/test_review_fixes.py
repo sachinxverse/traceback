@@ -29,7 +29,7 @@ def _ensure_match(db, lost_id, found_id):
                                           found_report_id=found_id).first()
     if m is None:
         m = Match(lost_report_id=lost_id, found_report_id=found_id,
-                  score=0.9, status=MatchStatus.SUGGESTED)
+                  total_score=0.9, status=MatchStatus.SUGGESTED)
         db.session.add(m)
         db.session.commit()
     return m
@@ -376,3 +376,254 @@ def test_a5_dispute_locks_item_against_competing_claims(client, app, db):
     with app.app_context():
         assert db.session.get(Report, found_id).status == ReportStatus.ACTIVE
         assert db.session.get(Match, match_id).status == MatchStatus.SUGGESTED
+
+
+# ----------------------------------------------------------------- B2
+def test_b2_production_validate_rejects_placeholders_and_short_keys():
+    import os
+    from config import ProductionConfig, get_config
+
+    env = {
+        "SECRET_KEY": "please-change-this-secret",
+        "JWT_SECRET_KEY": "x" * 40,
+        "DATABASE_URL": "postgresql+psycopg2://u:p@localhost/db",
+    }
+    old = {k: os.environ.get(k) for k in env}
+    try:
+        os.environ.update(env)
+        with pytest.raises(RuntimeError, match="weak/placeholder"):
+            ProductionConfig.validate()
+
+        os.environ["SECRET_KEY"] = "a" * 40
+        os.environ["JWT_SECRET_KEY"] = "short"
+        with pytest.raises(RuntimeError, match="weak/placeholder"):
+            ProductionConfig.validate()
+
+        os.environ["JWT_SECRET_KEY"] = "b" * 40
+        ProductionConfig.validate()  # strong keys -> passes
+
+        # strong keys but missing from env entirely -> still required
+        os.environ.pop("SECRET_KEY")
+        with pytest.raises(RuntimeError, match="Missing required"):
+            ProductionConfig.validate()
+    finally:
+        for k, v in old.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+
+
+def test_b2_compose_has_no_insecure_defaults():
+    import re
+    text = open("docker-compose.yml", encoding="utf-8").read()
+    assert "${SECRET_KEY:?set" in text
+    assert "${JWT_SECRET_KEY:?set" in text
+    assert "${POSTGRES_PASSWORD:?set" in text
+    assert ":-please-change" not in text
+    assert "POSTGRES_PASSWORD: traceback" not in text
+    assert 'COOKIE_SECURE: "false"' not in text
+    # db service must not publish ports
+    db_block = text.split("\n  db:\n")[1]
+    assert not re.search(r"^\s+ports:", db_block, re.M)
+
+
+def test_b2_dockerfile_separates_torch_index():
+    text = open("Dockerfile", encoding="utf-8").read()
+    assert "-r requirements.txt \\" in text  # first command without torch index
+    assert "ARG INSTALL_AI=true" in text
+    # the torch index line applies only to torch, never to requirements.txt
+    torch_line = [l for l in text.splitlines() if "download.pytorch.org" in l][0]
+    assert "requirements.txt" not in torch_line
+    assert "|| echo" in text
+
+
+# ----------------------------------------------------------------- B3
+def test_b3_migration_upgrade_and_check(tmp_path, monkeypatch):
+    """A fresh empty database can be migrated with `flask db upgrade` and
+    `flask db check` reports no differences."""
+    import subprocess
+    import sys
+    import os
+    py = sys.executable
+    dbfile = tmp_path / "mig.db"
+    env = dict(os.environ)
+    env["FLASK_APP"] = "wsgi.py"
+    env["DATABASE_URL"] = f"sqlite:///{dbfile.as_posix()}"
+    up = subprocess.run([py, "-m", "flask", "db", "upgrade"], env=env,
+                        capture_output=True, text=True, timeout=180,
+                        cwd=os.path.abspath(os.path.dirname(__file__) + "/.."))
+    assert up.returncode == 0, up.stdout + up.stderr
+    assert "Running upgrade" in (up.stdout + up.stderr)
+    assert "initial schema" in (up.stdout + up.stderr)
+    chk = subprocess.run([py, "-m", "flask", "db", "check"], env=env,
+                         capture_output=True, text=True, timeout=180,
+                         cwd=os.path.abspath(os.path.dirname(__file__) + "/.."))
+    assert chk.returncode == 0, chk.stdout + chk.stderr
+    assert "No new upgrade operations detected" in chk.stdout
+
+
+def test_b3_no_leftover_debug_files():
+    import glob
+    leftovers = [p for p in glob.glob("tests/test_zdebug*")]
+    assert leftovers == []
+
+
+# ----------------------------------------------------------------- C1
+def _seed_claims(db, n=120):
+    """Create n claims for one claimant without going through the API."""
+    from app.models import Match, Report, User
+    claimant = db.session.query(User).filter_by(email="pager@test.com").first()
+    if claimant is None:
+        claimant = User(name="Pager", email="pager@test.com")
+        claimant.set_password("Password1")
+        db.session.add(claimant)
+        finder = db.session.query(User).filter_by(email="pagerf@test.com").first()
+        if finder is None:
+            finder = User(name="PagerF", email="pagerf@test.com")
+            finder.set_password("Password1")
+            db.session.add(finder)
+        db.session.commit()
+    finder = db.session.query(User).filter_by(email="pagerf@test.com").one()
+    from datetime import datetime, timedelta
+    now = datetime.utcnow()
+    lost = Report(user_id=claimant.id, report_type="LOST", category="WALLETS_CARDS",
+                  title="Lost wallet", description="desc", status="ACTIVE",
+                  incident_date=now - timedelta(days=2))
+    found = Report(user_id=finder.id, report_type="FOUND", category="WALLETS_CARDS",
+                   title="Found wallet", description="desc", status="ACTIVE",
+                   custody="WITH_FINDER", incident_date=now - timedelta(days=1))
+    db.session.add_all([lost, found])
+    db.session.commit()
+    match = Match(lost_report_id=lost.id, found_report_id=found.id,
+                  total_score=0.9, status="SUGGESTED")
+    db.session.add(match)
+    db.session.commit()
+    claims = [Claim(match_id=match.id, claimant_id=claimant.id, report_id=found.id,
+                    claim_details=f"claim {i}", verification_status="PENDING")
+              for i in range(n)]
+    db.session.add_all(claims)
+    db.session.commit()
+    return claimant.id, n
+
+
+def test_c1_claims_mine_paginates_and_caps(client, app, db):
+    _seed_claims(db)
+    login(client, "pager@test.com")
+    r = client.get("/api/v1/claims/mine?per_page=50&page=2")
+    assert r.status_code == 200
+    body = r.get_json()
+    assert len(body["data"]) == 50
+    assert body["meta"]["page"] == 2
+    assert body["meta"]["total"] == 120
+    assert body["meta"]["pages"] == 3
+    # per_page is capped at 100
+    r = client.get("/api/v1/claims/mine?per_page=500")
+    assert r.get_json()["meta"]["per_page"] == 100
+
+
+def test_c1_query_count_constant_across_pages(client, app, db):
+    """N+1 check: page 1 and page 3 execute the same number of SQL queries."""
+    from sqlalchemy import event
+    from app.extensions import db as _db
+    _seed_claims(db)
+    login(client, "pager@test.com")
+    counts = {}
+    for page in (1, 3):
+        n = [0]
+
+        def _count(*a, **k):
+            n[0] += 1
+        with app.test_request_context():
+            pass
+        ev = event.listen(_db.engine, "before_cursor_execute", _count)
+        try:
+            r = client.get(f"/api/v1/claims/mine?per_page=10&page={page}")
+            assert r.status_code == 200
+        finally:
+            event.remove(_db.engine, "before_cursor_execute", _count)
+        counts[page] = n[0]
+    assert counts[1] == counts[3], counts
+
+
+def test_c1_incoming_and_admin_lists_paginate(client, app, db):
+    from tests.test_review_fixes import make_admin
+    make_admin(db)
+    _seed_claims(db)
+    login(client, "pagerf@test.com")
+    r = client.get("/api/v1/claims/incoming?per_page=25")
+    body = r.get_json()
+    assert r.status_code == 200
+    assert len(body["data"]) == 25
+    assert body["meta"]["total"] == 120
+    login(client, "admin@traceback.local")
+    r = client.get("/api/v1/admin/claims?status=PENDING&per_page=30")
+    body = r.get_json()
+    assert r.status_code == 200
+    assert len(body["data"]) == 30
+    assert body["meta"]["total"] == 120
+    r = client.get("/api/v1/admin/audit-logs?per_page=5&page=2")
+    assert r.status_code == 200 and r.get_json()["meta"]["page"] == 2
+
+
+# ----------------------------------------------------------------- C2
+def test_c2_labels_contain_positives_and_negatives():
+    """The seeded labels must include negatives (review C2: FPR was
+    meaningless with 0 negatives) and hard same-category distractors."""
+    import csv
+    rows = list(csv.DictReader(open("scripts/labels.csv", encoding="utf-8")))
+    pos = [r for r in rows if r["is_same_item"].strip() == "1"]
+    neg = [r for r in rows if r["is_same_item"].strip() == "0"]
+    assert len(pos) >= 5
+    assert len(neg) >= 8
+    # hard negatives: same lost id as a positive (same-category distractor)
+    pos_lost = {r["lost_id"] for r in pos}
+    hard = [r for r in neg if r["lost_id"] in pos_lost]
+    assert hard, "no hard same-category distractors in labels.csv"
+
+
+def test_c2_stub_embedder_separates_different_colours():
+    """Regression: the white label box used to dominate the stub image cosine
+    so different-coloured items scored ~0.98. Identical images must still
+    score 1.0; different border colours must fall below the image band."""
+    import io
+    import numpy as np
+    from PIL import Image
+    from app.services.embeddings import StubEmbedder
+
+    def img(colour):
+        im = Image.new("RGB", (320, 320), colour)
+        from PIL import ImageDraw
+        d = ImageDraw.Draw(im)
+        d.rectangle([64, 128, 256, 192], fill="white")
+        buf = io.BytesIO()
+        im.save(buf, format="PNG")
+        return buf.getvalue()
+
+    e = StubEmbedder()
+    v1 = e.embed_image(img((25, 25, 112)))   # midnightblue
+    v2 = e.embed_image(img((25, 25, 112)))   # identical
+    v3 = e.embed_image(img((192, 192, 192)))  # silver
+    cos_same = float(np.dot(v1, v2))
+    cos_diff = float(np.dot(v1, v3))
+    assert cos_same > 0.999, cos_same
+    assert cos_diff < 0.55, cos_diff
+
+
+def test_c2_evaluation_reports_both_labels(tmp_path, monkeypatch):
+    """The evaluation harness handles positive AND negative pairs."""
+    import csv
+    import subprocess
+    import sys
+    import os
+    labels = tmp_path / "labels.csv"
+    with open(labels, "w", newline="") as fh:
+        w = csv.writer(fh)
+        w.writerow(["lost_id", "found_id", "is_same_item"])
+        w.writerow([999991, 999992, 0])  # nonexistent ids are skipped safely
+    env = dict(os.environ, APP_CONFIG="testing", EMBEDDING_BACKEND="stub")
+    r = subprocess.run([sys.executable, "scripts/evaluate_matching.py",
+                        str(labels)], env=env, capture_output=True, text=True,
+                       timeout=180, cwd=os.path.abspath(os.path.dirname(__file__) + "/.."))
+    assert r.returncode == 0, r.stderr
+    assert "negative: 0" in r.stdout  # missing reports are skipped
