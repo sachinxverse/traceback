@@ -136,7 +136,7 @@ def create_report(client, report_type="LOST", category="WALLETS_CARDS",
         colour = (200, 30, 30) if report_type == "LOST" else (30, 30, 200)
         files.append((image_file(colour, f"{i}.png"),))
     return client.post("/api/v1/reports", data={**payload,
-                       **{f"images": image_file() for _ in range(images)}},
+                       **{"images": image_file() for _ in range(images)}},
                        content_type="multipart/form-data")
 
 
