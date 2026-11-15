@@ -9,3 +9,8 @@ ai_install.log
 pip_freeze.txt
 .coverage
 htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.log
+instance/

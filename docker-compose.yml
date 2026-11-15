@@ -1,28 +1,40 @@
+# B2: no insecure defaults. All secrets are REQUIRED from the environment
+# (docker compose fails fast with ${VAR:?...} when missing). Cookie security:
+# run behind HTTPS and set COOKIE_SECURE=true in the environment.
+x-web-env: &web-env
+  APP_CONFIG: production
+  SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY (32+ random bytes) in .env}
+  JWT_SECRET_KEY: ${JWT_SECRET_KEY:?set JWT_SECRET_KEY (32+ random bytes) in .env}
+  DATABASE_URL: postgresql+psycopg2://traceback:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/traceback
+  BASE_URL: ${BASE_URL:-https://localhost:8000}
+  UPLOAD_DIR: /data/uploads
+  EMBEDDING_BACKEND: ${EMBEDDING_BACKEND:-stub}
+  # Behind HTTPS set COOKIE_SECURE=true (in your .env / environment), not here.
+  COOKIE_SECURE: ${COOKIE_SECURE:?set COOKIE_SECURE=true behind HTTPS (or false for local HTTP)}
+
 services:
   web:
-    build: .
+    build:
+      context: .
+      args:
+        INSTALL_AI: ${INSTALL_AI:-true}
     ports:
       - "8000:8000"
     environment:
-      APP_CONFIG: production
-      SECRET_KEY: ${SECRET_KEY:-please-change-this-secret}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-please-change-this-jwt-secret}
-      DATABASE_URL: postgresql+psycopg2://traceback:traceback@db:5432/traceback
-      BASE_URL: http://localhost:8000
-      UPLOAD_DIR: /data/uploads
-      EMBEDDING_BACKEND: ${EMBEDDING_BACKEND:-stub}
-      COOKIE_SECURE: "false"
+      <<: *web-env
     volumes:
       - uploads:/data/uploads
       - model-cache:/home/appuser/.cache
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     command: sh -c "flask init-db && gunicorn -w 2 -k gthread --threads 4 -b 0.0.0.0:8000 wsgi:app"
   db:
     image: postgres:15
     environment:
       POSTGRES_USER: traceback
-      POSTGRES_PASSWORD: traceback
+      # B2: required from the environment; no default password.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: traceback
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -31,6 +43,8 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    # B2: the database is only reachable on the internal docker network.
+    # (no ports: section on purpose)
 
 volumes:
   pgdata:

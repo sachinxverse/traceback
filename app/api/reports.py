@@ -213,8 +213,12 @@ def close_report(report_id):
            for c in m.claims):
         raise ApiError("CONFLICT", "Cannot close a report with an approved claim", status=409)
     report.status = ReportStatus.CLOSED
+    # A3: reject every live claim linked to this report, release counterparts,
+    # expire matches and notify the affected users.
+    from ..services import claims as claim_service
+    claim_service.close_claims_for_report(report, actor=user)
     for m in _matches_of(report):
-        if m.status == MatchStatus.SUGGESTED:
+        if m.status in (MatchStatus.SUGGESTED, MatchStatus.CLAIMED):
             m.status = MatchStatus.EXPIRED
     db.session.commit()
     return jsonify({"data": report.owner_dict()})

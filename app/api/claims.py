@@ -35,6 +35,14 @@ def submit_claim(match_id):
         raise ApiError("CONFLICT", "Your lost report is not active", status=409)
     if found_report.status not in (ReportStatus.ACTIVE, ReportStatus.CLAIM_PENDING):
         raise ApiError("CONFLICT", "The found report is not claimable", status=409)
+    # A5: while another claim is APPROVED or DISPUTED the item is held and
+    # cannot receive new claims.
+    if Claim.query.filter(
+            Claim.report_id == found_report.id,
+            Claim.verification_status.in_(
+                [ClaimStatus.APPROVED, ClaimStatus.DISPUTED])).first():
+        raise ApiError("CONFLICT", "The item is currently held by another claim",
+                       status=409)
 
     from ..schemas import ClaimCreateSchema
     if request.content_type and "multipart" in (request.content_type or ""):

@@ -8,21 +8,11 @@ import click
 def register(app):
     @app.cli.command("init-db")
     def init_db():
-        """Run migrations (flask db upgrade) and create tables if missing."""
+        """Apply Alembic migrations (B3: upgrade() only, fails loudly)."""
         from flask_migrate import upgrade
-        from app.extensions import db
-        from sqlalchemy import inspect
         with app.app_context():
-            inspector = inspect(db.engine)
-            existing = set(inspector.get_table_names())
-            if not existing or "users" not in existing:
-                db.create_all()
-                click.echo("Tables created.")
-            try:
-                upgrade()
-                click.echo("Migrations applied.")
-            except Exception as e:
-                click.echo(f"Migration note: {e}")
+            upgrade()  # raises and exits non-zero on failure
+            click.echo("Migrations applied.")
 
     @app.cli.command("create-admin")
     @click.option("--email", required=True)

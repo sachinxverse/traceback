@@ -109,6 +109,10 @@ def remove_report(report_id):
     data = load_json(RemoveReportSchema(), request.get_json(silent=True) or {})
     report.status = ReportStatus.REMOVED
     report.removed_reason = data["reason"]
+    # A3: moderation removal must also cancel live claims and notify users.
+    from ..services import claims as claim_service
+    claim_service.close_claims_for_report(report, actor=user,
+                                          reason="Item report was removed by moderators")
     _expire_matches(report)
     db.session.commit()
     notify(report.user_id, "REPORT_REMOVED",

@@ -1,13 +1,24 @@
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+# Optional heavy AI extras: --build-arg INSTALL_AI=false for a slim image
+ARG INSTALL_AI=true
 
 WORKDIR /app
 
+# B1: the PyTorch index must only apply to torch, never to the base
+# requirements (the previous single command broke Flask/SQLAlchemy installs).
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt "torch" --index-url https://download.pytorch.org/whl/cpu \
- && pip install --no-cache-dir open_clip_torch sentence-transformers || echo "AI extras skipped"
+RUN pip install -r requirements.txt \
+ && if [ "$INSTALL_AI" = "true" ]; then \
+        pip install torch --index-url https://download.pytorch.org/whl/cpu \
+          || echo "torch skipped (platform wheels unavailable)"; \
+        pip install open_clip_torch sentence-transformers \
+          || echo "AI extras skipped"; \
+    fi
 
 COPY . .
 

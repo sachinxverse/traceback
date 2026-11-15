@@ -36,8 +36,11 @@ def _int_env(name, default):
 
 class BaseConfig:
     APP_NAME = "TRACEBACK"
-    SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-insecure-secret-key-change-me"
-    JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY") or os.environ.get("SECRET_KEY") or "dev-insecure-jwt-key-change-me"
+    # B2: insecure defaults are DEVELOPMENT-ONLY fallbacks (clearly marked,
+    # 32+ bytes to keep JWT signing warnings away). Production and Testing
+    # configs must never fall back to them (see validate() / TestingConfig).
+    SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-insecure-fallback-key-0123456789abcdef"
+    JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY") or os.environ.get("SECRET_KEY") or "dev-insecure-fallback-jwt-0123456789abcdef"
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL") or "sqlite:///traceback.db"
@@ -127,6 +130,9 @@ class TestingConfig(BaseConfig):
     JOBS_SYNC = True
     MAIL_SUPPRESS_SEND = True
     WTF_CSRF_ENABLED = False
+    # B2: stable 32+ byte keys so no insecure-key warnings appear in test runs.
+    SECRET_KEY = os.environ.get("SECRET_KEY") or "testing-secret-key-0123456789abcdef012345"
+    JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY") or "testing-jwt-key-0123456789abcdef01234567"
     # JWT cookies must still behave like production for tests (CSRF on).
     JWT_COOKIE_SECURE = False
 
@@ -134,11 +140,36 @@ class TestingConfig(BaseConfig):
 class ProductionConfig(BaseConfig):
     DEBUG = False
 
+    # B2: placeholders that must never reach production.
+    _PLACEHOLDERS = (
+        "change-me", "changeme", "please-change", "insecure", "secret",
+        "password", "traceback", "dev-insecure", "testing",
+    )
+
+    @classmethod
+    def _is_weak(cls, value):
+        if not value:
+            return True
+        v = value.lower()
+        return any(p in v for p in cls._PLACEHOLDERS) or len(value) < 32
+
     @classmethod
     def validate(cls):
         missing = [k for k in ("SECRET_KEY", "JWT_SECRET_KEY") if not os.environ.get(k)]
         if missing:
             raise RuntimeError(f"Missing required environment variables in production: {', '.join(missing)}")
+        weak = [k for k in ("SECRET_KEY", "JWT_SECRET_KEY")
+                if cls._is_weak(os.environ.get(k))]
+        if weak:
+            raise RuntimeError(
+                "Refusing to start with weak/placeholder "
+                f"{', '.join(weak)}: use 32+ random bytes "
+                '(e.g. python -c "import secrets; print(secrets.token_urlsafe(32))") '
+                "and never reuse values containing words like change-me/insecure")
+        if os.environ.get("DATABASE_URL", "").startswith("sqlite") and not os.environ.get("ALLOW_SQLITE_IN_PRODUCTION"):
+            raise RuntimeError(
+                "Refusing SQLite in production; set DATABASE_URL to PostgreSQL "
+                "(or set ALLOW_SQLITE_IN_PRODUCTION=1 for single-box demos)")
 
 
 CONFIG_MAP = {
