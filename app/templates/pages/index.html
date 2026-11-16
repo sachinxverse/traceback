@@ -1,106 +1,149 @@
 {% extends "base.html" %}
 {% block content %}
 {# ------------------------------------------------------------------ hero #}
-<div class="container pt-4">
+<div class="tb-container pt-4">
   <div class="hero">
-    <span class="badge-soft mb-3"><i class="bi bi-shield-check"></i> Human verification on every handover</span>
-    <h1 class="mb-3">Lost. Found.<br>Reconnected.</h1>
-    <p class="tagline mb-4">TRACEBACK pairs AI matching with human trust. Describe what you lost or found —
-      our engine compares photos, wording, place and time — then a real person verifies every claim before an item changes hands.</p>
-    <div class="actions d-flex gap-3 flex-wrap">
-      <a href="/report/lost" class="btn btn-amber btn-hero"><i class="bi bi-search-heart me-2"></i>I lost something</a>
-      <a href="/report/found" class="btn btn-primary btn-hero"><i class="bi bi-hand-thumbs-up me-2"></i>I found something</a>
-      <a href="/how-it-works" class="btn btn-ghost-light btn-hero">How it works</a>
-    </div>
-    <div class="hero-stats">
-      <div class="hero-stat"><div class="num">{{ stats.recovered }}</div><div class="lbl">Items recovered</div></div>
-      <div class="hero-stat"><div class="num">{{ stats.institutions }}</div><div class="lbl">Active institutions</div></div>
-      <div class="hero-stat"><div class="num">{{ stats.reports }}</div><div class="lbl">Reports filed</div></div>
+    <div class="hero-inner">
+      <div>
+        <span class="badge-soft mb-3"><i class="bi bi-shield-check" aria-hidden="true"></i> Human verification on every handover</span>
+        <h1 class="mb-3">Lost. Found.<br>Reconnected.</h1>
+        <p class="tagline mb-4">TRACEBACK pairs AI matching with human trust. Describe what you lost or found —
+          our engine compares photos, wording, place and time — then a real person verifies every claim before an item changes hands.</p>
+        <div class="actions mb-4">
+          <a href="/report/lost" class="btn btn-amber btn-hero btn-accent"><i class="bi bi-search-heart me-2" aria-hidden="true"></i>Find my item</a>
+          <a href="/report/found" class="btn btn-primary btn-hero"><i class="bi bi-hand-thumbs-up me-2" aria-hidden="true"></i>I found something</a>
+          <a href="/how-it-works" class="btn btn-ghost-light btn-hero">How it works</a>
+        </div>
+        <div class="hero-stats">
+          <div class="hero-stat"><div class="num">{{ stats.recovered }}</div><div class="lbl">Items recovered</div></div>
+          <div class="hero-stat"><div class="num">{{ stats.institutions }}</div><div class="lbl">Active institutions</div></div>
+          <div class="hero-stat"><div class="num">{{ stats.reports }}</div><div class="lbl">Reports filed</div></div>
+        </div>
+      </div>
+      <div>
+        {# live mock match card: the one glass accent (U8) #}
+        <div class="hero-mock" role="img" aria-label="Example match card showing an 86 percent match with image, text, location and time breakdown">
+          <div class="hm-head">
+            <div class="hm-photo"><i class="bi bi-wallet2" aria-hidden="true"></i></div>
+            <div class="min-w-0">
+              <div class="hm-title">Blue leather wallet</div>
+              <div class="hm-sub">Found near library bench · <span class="badge-verified">Verified</span></div>
+            </div>
+          </div>
+          <div class="d-flex align-items-center gap-3">
+            <div class="score-ring ring-sm" role="presentation">
+              <svg viewBox="0 0 44 44" aria-hidden="true">
+                <circle class="ring-track" cx="22" cy="22" r="19" fill="none" stroke-width="4.5"></circle>
+                <circle class="ring-fill" cx="22" cy="22" r="19" fill="none" stroke-width="4.5"
+                        stroke="#10B981" stroke-dasharray="102.67 119.38"></circle>
+              </svg>
+              <span class="ring-label" style="color:#fff">86%</span>
+            </div>
+            <div class="flex-grow-1 w-100">
+              <div class="hm-labels mb-2">
+                <div class="d-flex justify-content-between"><small>Image</small><small class="fw-bold">92</small></div>
+                <div class="breakdown-bar bar-image"><span style="width:92%"></span></div>
+              </div>
+              <div class="hm-labels mb-2">
+                <div class="d-flex justify-content-between"><small>Text</small><small class="fw-bold">81</small></div>
+                <div class="breakdown-bar bar-text"><span style="width:81%"></span></div>
+              </div>
+              <div class="hm-labels mb-2">
+                <div class="d-flex justify-content-between"><small>Location</small><small class="fw-bold">84</small></div>
+                <div class="breakdown-bar bar-location"><span style="width:84%"></span></div>
+              </div>
+              <div class="hm-labels">
+                <div class="d-flex justify-content-between"><small>Time</small><small class="fw-bold">87</small></div>
+                <div class="breakdown-bar bar-time"><span style="width:87%"></span></div>
+              </div>
+            </div>
+          </div>
+          <div class="hm-note">
+            <i class="bi bi-shield-check" aria-hidden="true"></i>
+            A match is a recommendation — a human verifies every handover.
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
 {# --------------------------------------------------------- how it works #}
-<div class="container section-pad">
+<div class="tb-container section-pad">
   <div class="text-center mb-4">
     <div class="section-label">Three steps to reconnect</div>
-    <h2>From "missing" to "mine again"</h2>
+    <h2>From &ldquo;missing&rdquo; to &ldquo;mine again&rdquo;</h2>
   </div>
-  <div class="row g-4 justify-content-center">
-    <div class="col-md-4">
-      <div class="card card-hover step-card step-1">
-        <div class="step-num">1</div>
-        <div class="step-icon"><i class="bi bi-file-earmark-image"></i></div>
-        <h5>Report it</h5>
-        <p class="text-muted small mb-0">Submit a Lost or Found report with photos, description, date and location —
-          or scan an institution's QR poster to file it exactly where it happened.</p>
-      </div>
+  <div class="steps-grid">
+    <div class="card card-hover step-card step-1">
+      <div class="step-num" aria-hidden="true">1</div>
+      <div class="step-icon"><i class="bi bi-file-earmark-image" aria-hidden="true"></i></div>
+      <h5>Report it</h5>
+      <p class="small mb-0">Submit a Lost or Found report with photos, description, date and location —
+        or scan an institution's QR poster to file it exactly where it happened.</p>
     </div>
-    <div class="col-md-4">
-      <div class="card card-hover step-card step-2">
-        <div class="step-num">2</div>
-        <div class="step-icon"><i class="bi bi-stars"></i></div>
-        <h5>Get matched</h5>
-        <p class="text-muted small mb-0">The engine compares image similarity, wording, distance and timing, and shows
-          a ranked score breakdown — never hidden, always explainable.</p>
-      </div>
+    <div class="card card-hover step-card step-2">
+      <div class="step-num" aria-hidden="true">2</div>
+      <div class="step-icon"><i class="bi bi-stars" aria-hidden="true"></i></div>
+      <h5>Get matched</h5>
+      <p class="small mb-0">The engine compares image similarity, wording, distance and timing, and shows
+        a ranked score breakdown — never hidden, always explainable.</p>
     </div>
-    <div class="col-md-4">
-      <div class="card card-hover step-card step-3">
-        <div class="step-num">3</div>
-        <div class="step-icon"><i class="bi bi-patch-check"></i></div>
-        <h5>Verify &amp; recover</h5>
-        <p class="text-muted small mb-0">The owner submits a claim with details only the true owner would know.
-          A human reviewer approves it, hands the item over, and recovery is confirmed by both sides.</p>
-      </div>
+    <div class="card card-hover step-card step-3">
+      <div class="step-num" aria-hidden="true">3</div>
+      <div class="step-icon"><i class="bi bi-patch-check" aria-hidden="true"></i></div>
+      <h5>Verify &amp; recover</h5>
+      <p class="small mb-0">The owner submits a claim with details only the true owner would know.
+        A human reviewer approves it, hands the item over, and recovery is confirmed by both sides.</p>
     </div>
   </div>
 </div>
 
-{# ------------------------------------------------------------- trust row #}
-<div class="container pb-2">
-  <div class="row g-3">
-    <div class="col-md-4"><div class="card card-hover h-100 p-4">
-      <div class="mb-2" style="color:var(--teal);font-size:1.5rem"><i class="bi bi-lock"></i></div>
+{# ------------------------------------------------------- bento trust grid #}
+<div class="tb-container pb-2">
+  <div class="bento">
+    <div class="card card-hover bento-card bento-lg">
+      <div class="mb-2" style="color:var(--teal-600);font-size:1.6rem"><i class="bi bi-lock" aria-hidden="true"></i></div>
       <h5>Private by design</h5>
-      <p class="text-muted small mb-0">Contact details are never shared between users. Private identifying details stay hidden and
-        are only compared during claim review.</p>
-    </div></div>
-    <div class="col-md-4"><div class="card card-hover h-100 p-4">
-      <div class="mb-2" style="color:var(--blue);font-size:1.5rem"><i class="bi bi-people"></i></div>
+      <p class="small mb-0">Contact details are never shared between users. Private identifying details stay hidden and
+        are only compared during claim review — you choose what proves it's yours, and only the reviewer sees it.</p>
+    </div>
+    <div class="card card-hover bento-card">
+      <div class="mb-2" style="color:var(--blue-600);font-size:1.5rem"><i class="bi bi-people" aria-hidden="true"></i></div>
       <h5>Institution network</h5>
-      <p class="text-muted small mb-0">Colleges, stations, malls and airports run QR posters so found items land in the
+      <p class="small mb-0">Colleges, stations, malls and airports run QR posters so found items land in the
         right hands — with staff-only review queues.</p>
-    </div></div>
-    <div class="col-md-4"><div class="card card-hover h-100 p-4">
-      <div class="mb-2" style="color:var(--amber);font-size:1.5rem"><i class="bi bi-activity"></i></div>
+    </div>
+    <div class="card card-hover bento-card">
+      <div class="mb-2" style="color:var(--amber-700);font-size:1.5rem"><i class="bi bi-activity" aria-hidden="true"></i></div>
       <h5>Transparent scoring</h5>
-      <p class="text-muted small mb-0">Every match shows which signals were used and how strong each one is.
+      <p class="small mb-0">Every match shows which signals were used and how strong each one is.
         A match is a recommendation, never a verdict.</p>
-    </div></div>
+    </div>
   </div>
 </div>
 
 {# ---------------------------------------------------------- institutions #}
-<div class="container section-pad">
+<div class="tb-container section-pad">
   <div class="d-flex justify-content-between align-items-end mb-3 flex-wrap gap-2">
     <div>
       <div class="section-label">Where items find their way home</div>
       <h2 class="mb-0">Participating institutions</h2>
     </div>
-    <a class="btn btn-sm btn-outline-primary" href="/institutions">View directory <i class="bi bi-arrow-right"></i></a>
+    <a class="btn btn-sm btn-found" href="/institutions">View directory <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
   </div>
   <div class="row g-3">
     {% for i in institutions %}
-    <div class="col-md-4"><div class="card card-hover inst-card p-3 h-100 d-flex flex-row align-items-center gap-3">
-      <div style="width:44px;height:44px;border-radius:12px;background:rgba(29,78,216,.1);color:var(--blue)"
-           class="d-grid place-items-center fs-5"><i class="bi bi-building"></i></div>
-      <div>
+    <div class="col-md-4"><a class="card card-hover inst-card p-3 h-100" href="/i/{{ i.slug }}" aria-label="View {{ i.name }}">
+      <div class="inst-icon"><i class="bi bi-building" aria-hidden="true"></i></div>
+      <div class="min-w-0">
         <div class="card-title-sm">{{ i.name }}</div>
-        <div class="text-muted small">{{ i.institution_type.value.replace('_',' ')|title if i.institution_type else '' }}
-          {% if i.verified %}· <i class="bi bi-patch-check-fill" style="color:var(--teal)"></i> Verified{% endif %}</div>
+        <div class="inst-meta">
+          <span class="badge-type">{{ i.institution_type.value.replace('_',' ')|title if i.institution_type else '' }}</span>
+          {% if i.verified %}<span class="badge-verified"><i class="bi bi-patch-check-fill" aria-hidden="true"></i>Verified</span>{% endif %}
+        </div>
       </div>
-    </div></div>
+    </a></div>
     {% else %}
     <div class="col-12">
       {% from "macros/ui.html" import empty_state %}
@@ -111,16 +154,16 @@
 </div>
 
 {# ------------------------------------------------------------------ CTA #}
-<div class="container pb-5">
+<div class="tb-container pb-5">
   <div class="cta-band text-center">
-    <h2 class="text-white mb-2">Something is waiting to be found.</h2>
-    <p class="mb-4" style="color:#B9CBE4">File a report in under two minutes. Matching starts the moment you hit submit.</p>
+    <h2 class="mb-2">Something is waiting to be found.</h2>
+    <p class="mb-4" style="color:#C3D3EA;max-width:none">File a report in under two minutes. Matching starts the moment you hit submit.</p>
     <div class="d-flex justify-content-center gap-3 flex-wrap">
       <a href="/report/lost" class="btn btn-amber btn-hero">Report a lost item</a>
       <a href="/report/found" class="btn btn-light btn-hero">Report a found item</a>
     </div>
-    <p class="small mt-4 mb-0" style="color:#8FA6C4">
-      <i class="bi bi-shield-check me-1"></i>Your contact details and private details are never shown to other users.</p>
+    <p class="small mt-4 mb-0" style="color:#9FB4D0;max-width:none">
+      <i class="bi bi-shield-check me-1" aria-hidden="true"></i>Your contact details and private details are never shown to other users.</p>
   </div>
 </div>
 {% endblock %}

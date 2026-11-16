@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+<div class="tb-container page-top">
 <h1>Claims</h1>
 <ul class="nav nav-tabs mb-3">
   <li class="nav-item"><a class="nav-link active" href="#tab-mine" data-bs-toggle="tab">My claims</a></li>
@@ -29,4 +30,6 @@
 {% else %}<p class="text-muted">No claims awaiting your review.</p>{% endfor %}
 </div>
 </div>
+</div>
+
 {% endblock %}

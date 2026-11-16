@@ -1,19 +1,38 @@
 {% extends "base.html" %}
+{% block title %}Log in — TRACEBACK{% endblock %}
 {% block content %}
-<div class="row justify-content-center align-items-center" style="min-height:62vh"><div class="col-md-5">
-<div class="card p-4" style="border-radius:18px">
-<div class="text-center mb-3">
-  <span class="brand-mark mx-auto mb-2" style="width:44px;height:44px"><i class="bi bi-geo-alt-fill"></i></span>
-  <h2 class="mb-1">Welcome back</h2>
-  <p class="text-muted small mb-0">Log in to track your reports, matches and claims.</p>
+<div class="tb-container page-top">
+  <div class="row justify-content-center"><div class="col-md-5 col-lg-4">
+    <div class="card p-4 auth-card">
+      <div class="text-center mb-3">
+        <span class="brand-mark mx-auto mb-2" style="width:44px;height:44px"><i class="bi bi-geo-alt-fill" aria-hidden="true"></i></span>
+        <h1 class="h2 mb-1">Welcome back</h1>
+        <p class="mb-0 small">Log in to track your reports, matches and claims.</p>
+      </div>
+      <form id="login-form" novalidate>
+        <div class="form-field">
+          <label class="form-label" for="email">Email</label>
+          <input class="form-control" type="email" id="email" name="email" required
+                 autocomplete="email" placeholder="you@example.com" aria-describedby="login-error">
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="password">Password</label>
+          <div class="input-group">
+            <input class="form-control" type="password" id="password" name="password" required
+                   autocomplete="current-password" aria-describedby="login-error">
+            <button class="btn btn-toggle-pw" type="button" data-toggle-pw="password"
+                    aria-label="Show password" aria-pressed="false">
+              <i class="bi bi-eye" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+        <button class="btn btn-primary w-100" type="submit">
+          <span class="btn-label"><i class="bi bi-box-arrow-in-right me-1" aria-hidden="true"></i>Log in</span>
+          <span class="btn-spin d-none"><span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>Logging in…</span>
+        </button>
+      </form>
+      <p class="mt-3 mb-0 small">No account? <a href="/register">Register</a></p>
+    </div>
+  </div></div>
 </div>
-<form id="login-form">
-  <div class="mb-3"><label class="form-label" for="email">Email</label>
-    <input class="form-control" type="email" id="email" name="email" required></div>
-  <div class="mb-3"><label class="form-label" for="password">Password</label>
-    <input class="form-control" type="password" id="password" name="password" required></div>
-  <button class="btn btn-primary w-100" type="submit"><i class="bi bi-box-arrow-in-right me-1"></i>Log in</button>
-</form>
-<p class="mt-3 mb-0 small">No account? <a href="/register">Register</a></p>
-</div></div></div>
 {% endblock %}

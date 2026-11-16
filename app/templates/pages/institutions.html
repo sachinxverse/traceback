@@ -1,20 +1,52 @@
 {% extends "base.html" %}
+{% block title %}Institutions — TRACEBACK{% endblock %}
 {% block content %}
-<h1>Institutions</h1>
-<form class="row g-2 mb-4">
-  <div class="col-md-8"><input class="form-control" name="q" value="{{ q }}" placeholder="Search institutions…"></div>
-  <div class="col-md-2"><button class="btn btn-primary w-100">Search</button></div>
-</form>
-<div class="row g-3">
-{% for i in institutions %}
-  <div class="col-md-4"><div class="card p-3 h-100">
-    <h5>{{ i.name }}</h5>
-    <div class="text-muted small">{{ i.institution_type.value.replace('_',' ') if i.institution_type else '' }}</div>
-    <p class="small mb-2">{{ i.address or '' }}</p>
-    {% if i.verified %}<span class="status-pill status-RECOVERED">Verified</span>{% endif %}
-  </div></div>
-{% else %}
-  <p class="text-muted">No institutions found.</p>
-{% endfor %}
+<div class="tb-container page-top">
+  <div class="page-head">
+    <div>
+      <div class="section-label">Where items find their way home</div>
+      <h1 class="mb-1">Institutions</h1>
+      <p class="mb-0">Found items handed in at a partner institution are kept safe and reviewed by staff.</p>
+    </div>
+  </div>
+
+  <form id="inst-search-form" class="inst-search" role="search" aria-label="Search institutions">
+    <input class="form-control" id="inst-search-input" name="q" value="{{ q }}"
+           placeholder="Search by name, city or type…" aria-label="Search institutions">
+    <button class="btn btn-primary" type="submit">Search</button>
+  </form>
+
+  <div class="row g-3" id="inst-grid">
+  {% for i in institutions %}
+    <div class="col-md-6 col-lg-4">
+      <div class="card card-hover p-3 h-100">
+        <a class="stretched-link-card" href="/i/{{ i.slug }}" aria-label="View {{ i.name }}"></a>
+        <div class="inst-card">
+          <div class="inst-icon"><i class="bi bi-building" aria-hidden="true"></i></div>
+          <div class="min-w-0">
+            <h5>{{ i.name }}</h5>
+            <div class="inst-meta">
+              <span class="badge-type">{{ i.institution_type.value.replace('_',' ')|title if i.institution_type else 'Partner' }}</span>
+              {% if i.verified %}<span class="badge-verified"><i class="bi bi-patch-check-fill" aria-hidden="true"></i>Verified</span>{% endif %}
+            </div>
+            <p class="small mb-0 mt-1">{{ i.address or '' }}</p>
+          </div>
+        </div>
+        <div class="inst-actions position-relative">
+          <a class="btn btn-amber btn-sm" href="/report/lost?institution={{ i.slug }}"><i class="bi bi-search-heart me-1" aria-hidden="true"></i>Report lost here</a>
+          <a class="btn btn-found btn-sm" href="/report/found?institution={{ i.slug }}"><i class="bi bi-hand-thumbs-up me-1" aria-hidden="true"></i>Report found here</a>
+        </div>
+      </div>
+    </div>
+  {% else %}
+    <div class="col-12">
+      {% from "macros/ui.html" import empty_state %}
+      {{ empty_state('bi-building', 'No institutions match your search', 'Try a different name, city or type — or clear the search.') }}
+    </div>
+  {% endfor %}
+  </div>
 </div>
+{% endblock %}
+{% block scripts %}
+<script type="module" src="/static/js/institutions.js"></script>
 {% endblock %}

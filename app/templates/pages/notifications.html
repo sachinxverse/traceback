@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+<div class="tb-container page-top">
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h1>Notifications</h1>
   <button class="btn btn-outline-primary" id="read-all">Mark all read</button>
@@ -11,13 +12,9 @@
   {% if n.link %}<a href="{{ n.link }}">Open</a>{% endif %}
 </div>
 {% else %}<p class="text-muted">No notifications.</p>{% endfor %}
+</div>
+
 {% endblock %}
 {% block scripts %}
-<script type="module">
-import { apiFetch } from '/static/js/api.js';
-document.getElementById('read-all')?.addEventListener('click', async () => {
-  await apiFetch('/notifications/read-all', { method: 'POST' });
-  location.reload();
-});
-</script>
+<script type="module" src="/static/js/notifications.js"></script>
 {% endblock %}

@@ -1,25 +1,57 @@
 {% extends "base.html" %}
+{% block title %}Register — TRACEBACK{% endblock %}
 {% block content %}
-<div class="row justify-content-center align-items-center" style="min-height:62vh"><div class="col-md-5">
-<div class="card p-4" style="border-radius:18px">
-<div class="text-center mb-3">
-  <span class="brand-mark mx-auto mb-2" style="width:44px;height:44px"><i class="bi bi-geo-alt-fill"></i></span>
-  <h2 class="mb-1">Join TRACEBACK</h2>
-  <p class="text-muted small mb-0">One account for lost and found reports.</p>
+<div class="tb-container page-top">
+  <div class="row justify-content-center"><div class="col-md-5 col-lg-4">
+    <div class="card p-4 auth-card">
+      <div class="text-center mb-3">
+        <span class="brand-mark mx-auto mb-2" style="width:44px;height:44px"><i class="bi bi-geo-alt-fill" aria-hidden="true"></i></span>
+        <h1 class="h2 mb-1">Join TRACEBACK</h1>
+        <p class="mb-0 small">One account for lost and found reports. We never share your contact details.</p>
+      </div>
+      <form id="register-form" novalidate>
+        <div class="form-field">
+          <label class="form-label" for="name">Full name</label>
+          <input class="form-control" id="name" name="name" required minlength="2"
+                 autocomplete="name" placeholder="e.g. Aisha Rawat" aria-describedby="name-error">
+          <div class="field-error" id="name-error">Please enter at least 2 characters.</div>
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="email">Email</label>
+          <input class="form-control" type="email" id="email" name="email" required
+                 autocomplete="email" placeholder="you@example.com" aria-describedby="email-error">
+          <div class="field-error" id="email-error">That doesn't look like a valid email address.</div>
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="phone">Phone <span class="text-faint">(optional, private)</span></label>
+          <input class="form-control" type="tel" id="phone" name="phone"
+                 autocomplete="tel" placeholder="+91 98xxx xxxxx">
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="password">Password</label>
+          <div class="input-group">
+            <input class="form-control" type="password" id="password" name="password" required
+                   autocomplete="new-password" aria-describedby="pw-rules pw-error">
+            <button class="btn btn-toggle-pw" type="button" data-toggle-pw="password"
+                    aria-label="Show password" aria-pressed="false">
+              <i class="bi bi-eye" aria-hidden="true"></i>
+            </button>
+          </div>
+          <ul class="pw-rules" id="pw-rules" aria-label="Password requirements">
+            <li data-rule="length"><i class="bi bi-circle" aria-hidden="true"></i>At least 8 characters</li>
+            <li data-rule="letter"><i class="bi bi-circle" aria-hidden="true"></i>Contains a letter</li>
+            <li data-rule="digit"><i class="bi bi-circle" aria-hidden="true"></i>Contains a digit</li>
+          </ul>
+          <div class="field-error" id="pw-error">Password must be 8+ characters with a letter and a digit.</div>
+        </div>
+        <button class="btn btn-primary w-100" type="submit">
+          <span class="btn-label"><i class="bi bi-person-plus me-1" aria-hidden="true"></i>Create account</span>
+          <span class="btn-spin d-none"><span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>Creating…</span>
+        </button>
+      </form>
+      <p class="mt-3 mb-0 small">Already registered? <a href="/login">Log in</a></p>
+    </div>
+  </div></div>
 </div>
-<form id="register-form">
-  <div class="mb-3"><label class="form-label" for="name">Full name</label>
-    <input class="form-control" id="name" name="name" required minlength="2"></div>
-  <div class="mb-3"><label class="form-label" for="email">Email</label>
-    <input class="form-control" type="email" id="email" name="email" required></div>
-  <div class="mb-3"><label class="form-label" for="phone">Phone (optional, private)</label>
-    <input class="form-control" id="phone" name="phone"></div>
-  <div class="mb-3"><label class="form-label" for="password">Password</label>
-    <input class="form-control" type="password" id="password" name="password" required minlength="8"
-      pattern=".*[A-Za-z].*\d.*|\d.*[A-Za-z].*" title="At least 8 characters with a letter and a digit">
-    <div class="form-text">Min 8 characters, at least one letter and one digit.</div></div>
-  <button class="btn btn-primary w-100" type="submit"><i class="bi bi-person-plus me-1"></i>Create account</button>
-</form>
-<p class="mt-3 mb-0 small">Already registered? <a href="/login">Log in</a></p>
-</div></div></div>
 {% endblock %}
+{% block scripts %}<script type="module" src="/static/js/register.js"></script>{% endblock %}

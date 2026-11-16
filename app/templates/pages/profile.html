@@ -1,8 +1,51 @@
 {% extends "base.html" %}
+{% block title %}Profile — TRACEBACK{% endblock %}
 {% block content %}
-<h1>Profile</h1>
-<div class="row g-4"><div class="col-md-5">
-<div class="card p-4">
-<form id="profile-form">
-  <div class="mb-3"><label class="form-label" for="pf-name">Name</label><input class="form-control" id="pf-name" name="name" value="{{ user.name }}"></div>
-  <div class="mb-3"><label class="form-label" for="pf-phone">Phone (private)</label><input class="form-control" id="pf-phone" name="phone" 
+<div class="tb-container page-top" style="max-width:760px">
+  <div class="page-head">
+    <div>
+      <div class="section-label">Your account</div>
+      <h1 class="mb-1">Profile</h1>
+      <p class="mb-0">Signed in as {{ user.email }}</p>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-md-6">
+      <div class="card p-4 h-100">
+        <h5 class="mb-3"><i class="bi bi-person me-2" aria-hidden="true"></i>Details</h5>
+        <form id="profile-form">
+          <div class="mb-3">
+            <label class="form-label" for="pf-name">Name</label>
+            <input class="form-control" id="pf-name" name="name" value="{{ user.name }}" autocomplete="name">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="pf-phone">Phone <span class="text-faint">(private — never shown to other users)</span></label>
+            <input class="form-control" id="pf-phone" name="phone" value="{{ user.phone or '' }}" autocomplete="tel"
+                   placeholder="Used only for handover coordination">
+          </div>
+          <button class="btn btn-primary" type="submit">Save changes</button>
+        </form>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card p-4 h-100">
+        <h5 class="mb-3"><i class="bi bi-shield-lock me-2" aria-hidden="true"></i>Change password</h5>
+        <form id="password-form">
+          <div class="mb-3">
+            <label class="form-label" for="current_password">Current password</label>
+            <input class="form-control" type="password" id="current_password" name="current_password" autocomplete="current-password">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="new_password">New password</label>
+            <input class="form-control" type="password" id="new_password" name="new_password" autocomplete="new-password"
+                   aria-describedby="pw-hint">
+            <div class="form-hint" id="pw-hint">At least 8 characters, with a letter and a digit.</div>
+          </div>
+          <button class="btn btn-primary" type="submit">Update password</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,102 +1,152 @@
 {% extends "base.html" %}
+{% block title %}Report a {{ report_type }} item — TRACEBACK{% endblock %}
 {% block content %}
-<div class="row justify-content-center"><div class="col-lg-9">
-<div class="page-head">
-  <div>
-    <div class="section-label" style="color:{{ 'var(--amber)' if report_type == 'lost' else 'var(--blue)' }}">
-      {{ 'LOST' if report_type == 'lost' else 'FOUND' }} report</div>
-    <h1>Report a {{ report_type }} item</h1>
-    <p class="text-muted mb-0">Fields marked * are required. Photos dramatically improve matching.</p>
+{% set accent = 'var(--amber-700)' if report_type == 'lost' else 'var(--blue-600)' %}
+<div class="tb-container page-top" style="max-width:860px">
+  <div class="page-head">
+    <div>
+      <div class="section-label" style="color:{{ accent }}">
+        <i class="bi {{ 'bi-search-heart' if report_type == 'lost' else 'bi-hand-thumbs-up' }}" aria-hidden="true"></i>
+        {{ 'Lost' if report_type == 'lost' else 'Found' }} report
+      </div>
+      <h1 class="mb-1">Report a {{ report_type }} item</h1>
+      <p class="mb-0">Four quick steps. Your progress is saved as you go.</p>
+    </div>
   </div>
+
+  <form id="report-form" novalidate>
+    <div class="stepper-progress" aria-hidden="false">
+      <span class="stp-label" id="step-label" aria-live="polite">Step 1 of 4</span>
+      <div class="progress" role="progressbar" aria-label="Wizard progress"
+           aria-valuemin="1" aria-valuemax="4" aria-valuenow="1" id="step-progress">
+        <span style="width:25%"></span>
+      </div>
+    </div>
+
+    {# ---------------------------------------------------------- step 1: photos #}
+    <section class="stepper-step card p-4 mb-3 active" data-step="1" aria-label="Step 1: Photos">
+      <h5 class="mb-3"><i class="bi bi-camera me-2" aria-hidden="true" style="color:{{ accent }}"></i>Photos</h5>
+      <p class="small mb-3">Photos dramatically improve matching — add up to 4. Optional but recommended.</p>
+      <div class="dropzone" id="dropzone" role="button" tabindex="0" aria-label="Add photos: drag and drop or press Enter to browse">
+        Drag &amp; drop images here, or click to select (JPEG/PNG/WEBP, max 5&nbsp;MB each)
+      </div>
+      <input type="file" id="images" name="images" accept=".jpg,.jpeg,.png,.webp" multiple class="d-none">
+      <div id="preview-row" class="d-flex gap-2 mt-3 flex-wrap"></div>
+    </section>
+
+    {# ------------------------------------------------------ step 2: the item #}
+    <section class="stepper-step card p-4 mb-3" data-step="2" aria-label="Step 2: What is it">
+      <h5 class="mb-3"><i class="bi bi-tag me-2" aria-hidden="true" style="color:{{ accent }}"></i>What is it?</h5>
+      <div class="form-field">
+        <label class="form-label" id="category-label">Category *</label>
+        <div class="category-grid mb-2" id="category-grid" role="listbox" aria-labelledby="category-label">
+          {% for c in categories %}
+          <div class="category-cell" data-value="{{ c }}" role="option" aria-selected="false" tabindex="0">{{ c.replace('_',' ').title() }}</div>
+          {% endfor %}
+        </div>
+        <input type="hidden" name="category" id="category-value">
+        <div class="field-error" id="category-error">Please choose a category.</div>
+      </div>
+      <div class="form-field">
+        <label class="form-label" for="title">Title *</label>
+        <input class="form-control" id="title" name="title" required minlength="3" maxlength="150"
+               value="{{ (prefill.name ~ ' - ') if prefill else '' }}" aria-describedby="title-error">
+        <div class="field-error" id="title-error">Give the item a short title (at least 3 characters).</div>
+      </div>
+      <div class="form-field">
+        <label class="form-label" for="description">Description *</label>
+        <textarea class="form-control" id="description" name="description" rows="4" required
+          minlength="10" maxlength="2000" placeholder="Describe the item: colour, brand, marks, contents…"
+          aria-describedby="description-error"></textarea>
+        <div class="field-error" id="description-error">A description of at least 10 characters helps the engine match.</div>
+      </div>
+      <div class="form-field">
+        <label class="form-label" for="private_details">Private identifying details (optional)</label>
+        <textarea class="form-control" id="private_details" name="private_details" rows="2" maxlength="1000"
+          placeholder="Details only the true owner would know: serial numbers, scratches, lock-screen, exact contents…"></textarea>
+        <div class="form-hint"><i class="bi bi-lock me-1" aria-hidden="true"></i>Only you and the claim reviewer will ever see this.</div>
+      </div>
+      {% if report_type == 'found' %}
+      <div class="form-field">
+        <label class="form-label" id="custody-label">Custody *</label>
+        <div class="d-flex flex-column gap-2" role="radiogroup" aria-labelledby="custody-label">
+          <div class="form-check m-0">
+            <input class="form-check-input" type="radio" name="custody" id="custody1" value="WITH_FINDER">
+            <label class="form-check-label" for="custody1">I'm keeping it with me</label>
+          </div>
+          <div class="form-check m-0">
+            <input class="form-check-input" type="radio" name="custody" id="custody2" value="AT_INSTITUTION">
+            <label class="form-check-label" for="custody2">It's held at an institution</label>
+          </div>
+        </div>
+        <div class="field-error" id="custody-error">Please tell us where the item is.</div>
+      </div>
+      {% endif %}
+    </section>
+
+    {# ------------------------------------------------- step 3: where and when #}
+    <section class="stepper-step card p-4 mb-3" data-step="3" aria-label="Step 3: Where and when">
+      <h5 class="mb-3"><i class="bi bi-geo-alt me-2" aria-hidden="true" style="color:{{ accent }}"></i>Where and when</h5>
+      <div id="map-picker" class="mb-3"></div>
+      <div class="input-group mb-2">
+        <input class="form-control" id="geocode-q" placeholder="Search address…">
+        <button class="btn btn-outline-primary" type="button" id="geocode-btn">Search</button>
+        <button class="btn btn-outline-secondary" type="button" id="geo-loc-btn">Use my location</button>
+      </div>
+      <div id="geocode-results" class="list-group mb-2"></div>
+      <div class="row">
+        <div class="col-md-6"><label class="form-label" for="latitude">Latitude</label>
+          <input class="form-control" name="latitude" id="latitude"></div>
+        <div class="col-md-6"><label class="form-label" for="longitude">Longitude</label>
+          <input class="form-control" name="longitude" id="longitude"></div>
+      </div>
+      <div class="form-field mt-2">
+        <label class="form-label" for="location_text">Location description</label>
+        <input class="form-control" id="location_text" name="location_text" maxlength="255"
+          placeholder="e.g. near gate 2, second floor">
+      </div>
+      <div class="form-field">
+        <label class="form-label" for="incident_date">Date and time *</label>
+        <input class="form-control" type="datetime-local" id="incident_date" name="incident_date" required
+               aria-describedby="date-error">
+        <div class="field-error" id="date-error">Please tell us when this happened.</div>
+      </div>
+      <div class="form-field">
+        <label class="form-label" for="institution">Institution (optional)</label>
+        <select class="form-select" id="institution" name="institution_id">
+          <option value="">None</option>
+          {% for i in institutions %}
+          <option value="{{ i.id }}" {% if prefill and prefill.id == i.id %}selected{% endif %}>{{ i.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <input type="hidden" id="prefill-lat" value="{{ prefill.latitude or '' }}">
+      <input type="hidden" id="prefill-lng" value="{{ prefill.longitude or '' }}">
+    </section>
+
+    {# ------------------------------------------------------ step 4: review #}
+    <section class="stepper-step card p-4 mb-3" data-step="4" aria-label="Step 4: Review and submit">
+      <h5 class="mb-3"><i class="bi bi-clipboard-check me-2" aria-hidden="true" style="color:{{ accent }}"></i>Review and submit</h5>
+      <div id="review-summary" class="mb-3"></div>
+      <p class="small mb-0"><i class="bi bi-shield-check me-1" aria-hidden="true"></i>
+        Your contact details and private details are never shown to other users.</p>
+      <div id="processing-note" class="alert alert-info mt-3 d-none mb-0">
+        <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Processing your report (photos, matching)…
+      </div>
+    </section>
+
+    <div class="stepper-nav">
+      <button class="btn btn-outline-secondary" type="button" id="step-back" disabled>
+        <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Back</button>
+      <button class="btn btn-primary" type="button" id="step-next">
+        Next<i class="bi bi-arrow-right ms-1" aria-hidden="true"></i></button>
+      <button class="btn btn-primary d-none" type="submit" id="submit-btn">
+        <span class="btn-label"><i class="bi bi-send me-1" aria-hidden="true"></i>Submit report</span>
+        <span class="btn-spin d-none"><span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>Submitting…</span>
+      </button>
+    </div>
+  </form>
 </div>
-<form id="report-form">
-  <div class="card p-4 mb-3">
-    <div class="d-flex align-items-center gap-2 mb-3">
-      <span style="width:28px;height:28px;border-radius:9px;background:var(--navy);color:#fff" class="d-grid fs-6">1</span>
-      <h5 class="mb-0">The item</h5>
-    </div>
-    <label class="form-label" id="category-label">Category *</label>
-    <div class="category-grid mb-3" id="category-grid">
-      {% for c in categories %}
-      <div class="category-cell" data-value="{{ c }}">{{ c.replace('_',' ').title() }}</div>
-      {% endfor %}
-    </div>
-    <input type="hidden" name="category" id="category-value">
-
-    <label class="form-label" for="title">Title *</label>
-    <input class="form-control mb-3" id="title" name="title" required minlength="3" maxlength="150"
-      value="{{ (prefill.name ~ ' - ') if prefill else '' }}">
-
-    <label class="form-label" for="description">Description *</label>
-    <textarea class="form-control mb-3" id="description" name="description" rows="4" required
-      minlength="10" maxlength="2000" placeholder="Describe the item: colour, brand, marks, contents…"></textarea>
-
-    <label class="form-label" for="private_details">Private identifying details (optional)</label>
-    <textarea class="form-control mb-1" id="private_details" name="private_details" rows="2" maxlength="1000"
-      placeholder="Details only the true owner would know: serial numbers, scratches, lock-screen, exact contents…"></textarea>
-    <div class="form-text mb-3">This stays hidden from other users. The reviewer of a claim will compare it with what the claimant provides. Do not share it publicly.</div>
-
-    <label class="form-label" for="incident_date">Date and time *</label>
-    <input class="form-control mb-3" type="datetime-local" id="incident_date" name="incident_date" required>
-
-    {% if report_type == 'found' %}
-    <label class="form-label" id="custody-label">Custody *</label>
-    <div class="d-flex gap-3 mb-3">
-      <div class="form-check"><input class="form-check-input" type="radio" name="custody" id="custody1" value="WITH_FINDER">
-        <label class="form-check-label" for="custody1">I'm keeping it with me</label></div>
-      <div class="form-check"><input class="form-check-input" type="radio" name="custody" id="custody2" value="AT_INSTITUTION">
-        <label class="form-check-label" for="custody2">It's held at an institution</label></div>
-    </div>
-    {% endif %}
-
-    <label class="form-label" for="institution">Institution (optional)</label>
-    <select class="form-select mb-3" id="institution" name="institution_id">
-      <option value="">None</option>
-      {% for i in institutions %}
-      <option value="{{ i.id }}" {% if prefill and prefill.id == i.id %}selected{% endif %}>{{ i.name }}</option>
-      {% endfor %}
-    </select>
-    <input type="hidden" id="prefill-lat" value="{{ prefill.latitude or '' }}">
-    <input type="hidden" id="prefill-lng" value="{{ prefill.longitude or '' }}">
-  </div>
-
-  <div class="card p-4 mb-3">
-    <div class="d-flex align-items-center gap-2 mb-3">
-      <span style="width:28px;height:28px;border-radius:9px;background:var(--navy);color:#fff" class="d-grid fs-6">2</span>
-      <h5 class="mb-0">Where it happened</h5>
-    </div>
-    <div id="map-picker" class="mb-3"></div>
-    <div class="input-group mb-2">
-      <input class="form-control" id="geocode-q" placeholder="Search address…">
-      <button class="btn btn-outline-primary" type="button" id="geocode-btn">Search</button>
-      <button class="btn btn-outline-secondary" type="button" id="geo-loc-btn">Use my location</button>
-    </div>
-    <div id="geocode-results" class="list-group mb-2"></div>
-    <div class="row">
-      <div class="col-md-6"><label class="form-label" for="latitude">Latitude</label>
-        <input class="form-control" name="latitude" id="latitude"></div>
-      <div class="col-md-6"><label class="form-label" for="longitude">Longitude</label>
-        <input class="form-control" name="longitude" id="longitude"></div>
-    </div>
-    <label class="form-label mt-2" for="location_text">Location description</label>
-    <input class="form-control" id="location_text" name="location_text" maxlength="255"
-      placeholder="e.g. near gate 2, second floor">
-  </div>
-
-  <div class="card p-4 mb-3">
-    <div class="d-flex align-items-center gap-2 mb-3">
-      <span style="width:28px;height:28px;border-radius:9px;background:var(--navy);color:#fff" class="d-grid fs-6">3</span>
-      <h5 class="mb-0">Photos (up to 4)</h5>
-    </div>
-    <div class="dropzone" id="dropzone">Drag &amp; drop images here, or click to select (JPEG/PNG/WEBP, max 5&nbsp;MB each)</div>
-    <input type="file" id="images" name="images" accept=".jpg,.jpeg,.png,.webp" multiple class="d-none">
-    <div id="preview-row" class="d-flex gap-2 mt-3 flex-wrap"></div>
-  </div>
-
-  <button class="btn btn-primary btn-lg" type="submit" id="submit-btn">Submit report</button>
-</form>
-<div id="processing-note" class="alert alert-info mt-3 d-none">Processing your report (embeddings + matching)…</div>
-</div></div>
 {% endblock %}
 {% block scripts %}<script type="module" src="/static/js/reports.js"></script>
 <script type="module" src="/static/js/map.js"></script>{% endblock %}

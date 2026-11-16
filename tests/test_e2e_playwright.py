@@ -89,12 +89,16 @@ def _logout(page):
 
 def _fill_report(page, base, rtype, title, description):
     page.goto(f"{base}/report/{rtype}")
+    # 4-step wizard: photos -> item -> where/when -> review
+    page.click("#step-next")                       # step 1: photos (optional)
     page.click(".category-cell[data-value='WALLETS_CARDS']")
     page.fill("#title", title)
     page.fill("#description", description)
-    page.fill("#incident_date", "2026-01-10T12:30")
     if rtype == "found":
         page.check("#custody1")
+    page.click("#step-next")                       # step 3
+    page.fill("#incident_date", "2026-01-10T12:30")
+    page.click("#step-next")                       # step 4: review
     page.click("#submit-btn")
     page.wait_for_url("**/reports/*", timeout=15000)
     # wait for processing to finish (sync jobs in testing config)

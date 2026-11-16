@@ -1,12 +1,13 @@
 {% extends "base.html" %}
 {% block content %}
+<div class="tb-container page-top">
 <div class="page-head"><div>
   <div class="section-label" style="color:var(--blue)">Found items</div>
   <h1>Browse what's been found</h1>
 </div></div>
 <form class="row g-2 mb-4">
   <div class="col-md-5"><input class="form-control" name="q" value="{{ q }}" placeholder="Keyword…"></div>
-  <div class="col-md-4"><select class="form-select" name="category">
+  <div class="col-md-4"><select class="form-select" name="category" aria-label="Filter by category">
     <option value="">All categories</option>
     {% for c in categories %}<option value="{{ c }}" {{ 'selected' if c == category }}>{{ c.replace('_',' ').title() }}</option>{% endfor %}
   </select></div>
@@ -29,4 +30,6 @@
     <div class="es-title">Nothing matches your filters</div><div class="small">Try a different keyword or category.</div></div></div>
 {% endfor %}
 </div>
+</div>
+
 {% endblock %}

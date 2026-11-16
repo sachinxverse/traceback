@@ -70,6 +70,41 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // theme toggle (light / dark / system), persisted in localStorage
+  const themeBtn = document.getElementById('theme-toggle');
+  if (themeBtn) {
+    const label = document.getElementById('theme-current');
+    const stored = (() => { try { return localStorage.getItem('tb-theme') || 'light'; } catch (e) { return 'light'; } })();
+    if (label) label.textContent = stored;
+    themeBtn.addEventListener('click', () => {
+      const order = ['light', 'dark', 'system'];
+      const cur = (() => { try { return localStorage.getItem('tb-theme') || 'light'; } catch (e) { return 'light'; } })();
+      const next = order[(order.indexOf(cur) + 1) % order.length];
+      try { localStorage.setItem('tb-theme', next); } catch (e) { /* ignore */ }
+      const resolved = next === 'system'
+        ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : next;
+      if (resolved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+      else document.documentElement.removeAttribute('data-theme');
+      if (label) label.textContent = next;
+    });
+  }
+
+  // password show/hide toggles (login + register forms)
+  document.querySelectorAll('[data-toggle-pw]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const input = document.getElementById('password');
+      if (!input) return;
+      const show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      btn.setAttribute('aria-pressed', String(show));
+      btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+      const icon = btn.querySelector('i');
+      if (icon) icon.className = show ? 'bi bi-eye-slash' : 'bi bi-eye';
+      input.focus();
+    });
+  });
+
+  // logout button
   const logoutBtn = document.getElementById('logout-btn');
   if (logoutBtn) logoutBtn.addEventListener('click', async () => {
     // Try the access-token path first; if the access token is expired or
@@ -117,5 +152,11 @@ function detailText(err) {
 }
 
 function setBusy(form, busy) {
-  form.querySelectorAll('button[type="submit"]').forEach(b => { b.disabled = busy; });
+  form.querySelectorAll('button[type="submit"]').forEach(b => {
+    b.disabled = busy;
+    b.setAttribute('aria-busy', String(busy));
+    const label = b.querySelector('.btn-label');
+    const spin = b.querySelector('.btn-spin');
+    if (label && spin) { label.classList.toggle('d-none', busy); spin.classList.toggle('d-none', !busy); }
+  });
 }

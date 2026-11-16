@@ -754,10 +754,12 @@ def test_c3_base_template_landmarks_and_skip_link():
 
 
 def test_c3_contrast_variants_in_css():
+    tokens = open("app/static/css/tokens.css", encoding="utf-8").read()
     css = open("app/static/css/app.css", encoding="utf-8").read()
-    assert "--amber-deep: #B45309" in css
-    assert "--teal-deep: #0F766E" in css
+    # AA-safe deep variants live in the token layer (amber-700 #92400E, teal-700 #0F766E)
+    assert "--amber-700" in tokens
+    assert "--teal-700" in tokens
     # white-on-amber/teal small elements use the deep variants
-    assert ".btn-amber { background: var(--amber-deep)" in css
-    assert ".btn-teal { background: var(--teal-deep)" in css
-    assert ".badge-lost { background: var(--amber-deep)" in css
+    assert ".btn-amber { background: var(--amber-700)" in css
+    assert ".btn-teal { background: var(--teal-700)" in css
+    assert ".badge-lost { background: var(--amber-700)" in css

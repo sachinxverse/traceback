@@ -13,6 +13,7 @@ function tileLayer(map) {
 
 function initPicker() {
   const map = L.map('map-picker').setView([30.0668, 79.0193], 5);
+  document.getElementById('map-picker')._tbMap = map;  // stepper resizes on step show
   tileLayer(map);
   let marker = null;
   const latInput = document.getElementById('latitude');

@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="container py-4">
+<div class="container page-top">
 <div class="d-flex justify-content-between align-items-end mb-3 flex-wrap gap-2">
   <div><div class="section-label">Network</div><h1>Institutions</h1></div>
   <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#inst-modal">New institution</button>
 </div>
-<table class="table" id="inst-table"><thead>
+<div class="table-scroll"><table class="table" id="inst-table"><thead>
   <tr><th>Name</th><th>Slug</th><th>Type</th><th>Verified</th><th>Active</th><th>QR</th><th></th></tr>
 </thead><tbody>
 {% for i in institutions %}
@@ -17,7 +17,7 @@
   <td><button class="btn btn-sm btn-outline-secondary edit-inst" data-id="{{ i.id }}">Edit</button></td>
 </tr>
 {% endfor %}
-</tbody></table>
+</tbody></table></div>
 
 <div class="modal fade" id="inst-modal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
   <div class="modal-header"><h5 class="modal-title">Institution</h5></div>

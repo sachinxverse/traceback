@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="container py-4">
+<div class="container page-top">
 <div class="page-head"><div>
   <div class="section-label">Command centre</div>
   <h1>Admin portal</h1>
@@ -19,7 +19,7 @@
   <div class="col-lg-6"><div class="card p-3"><h5>Category breakdown</h5><canvas id="category-chart"></canvas></div></div>
 </div>
 <div class="card p-3 mt-4"><h5>Heatmap</h5>
-  <div class="d-flex gap-2 mb-2">
+  <div class="d-flex gap-2 mb-2 flex-wrap">
     <input type="date" id="hm-from" class="form-control" style="max-width:180px">
     <input type="date" id="hm-to" class="form-control" style="max-width:180px">
     <button class="btn btn-outline-primary" id="hm-apply">Apply</button>

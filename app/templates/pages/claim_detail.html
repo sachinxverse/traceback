@@ -2,14 +2,26 @@
 {% from "macros/ui.html" import status_pill %}
 {% block title %}Claim #{{ claim.id }} — TRACEBACK{% endblock %}
 {% block content %}
-<div class="container py-4">
+<div class="container page-top">
   <div class="page-head">
     <div>
       <div class="section-label">Claim review</div>
       <h1>Claim #{{ claim.id }} {{ status_pill(claim.verification_status.value) }}</h1>
     </div>
-    <a class="btn btn-sm btn-outline-secondary" href="/claims"><i class="bi bi-arrow-left me-1"></i>All claims</a>
+    <a class="btn btn-sm btn-outline-secondary" href="/claims"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>All claims</a>
   </div>
+
+  {% if claim.verification_status.value == 'COMPLETED' %}
+  {# recovered moment: celebratory, reduced-motion aware #}
+  <div class="recovered-banner mb-4" role="status">
+    <div class="rb-icon"><i class="bi bi-check-lg" aria-hidden="true"></i></div>
+    <div>
+      <h5 class="mb-1">Recovered — and reunited. Thank you both!</h5>
+      <p class="small mb-0">The item is back with its owner and this case is closed.
+        Your reports and messages stay available if you ever need them.</p>
+    </div>
+  </div>
+  {% endif %}
 
   <div class="row g-4">
     <div class="col-lg-7">

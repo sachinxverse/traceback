@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+<div class="tb-container page-top">
 <div class="text-center py-4">
   <div class="mx-auto mb-3 d-grid" style="width:64px;height:64px;border-radius:18px;background:rgba(29,78,216,.1);color:var(--blue)"><i class="bi bi-qr-code fs-2"></i></div>
   <div class="section-label">Institution report point</div>
@@ -11,4 +12,6 @@
   </div>
   <p class="text-muted small mt-4"><i class="bi bi-shield-check me-1"></i>Your report will be tagged with {{ institution.name }} and its location. Login is required to submit.</p>
 </div>
+</div>
+
 {% endblock %}

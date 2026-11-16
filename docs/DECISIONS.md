@@ -72,3 +72,40 @@ as required by Section 1.2 and acceptance criterion A16.
 33. **CDN assets pinned with SRI (C4).** All libraries pinned to exact
     versions with sha384 integrity + crossorigin; Leaflet moved to
     cdn.jsdelivr.net so the CSP allows a single script/style host.
+34. **Design system in a token layer (theme).** All colours/radii/shadows/fonts
+    live in `static/css/tokens.css` (`:root` + `[data-theme="dark"]`);
+    `app.css` consumes only the variables. Dark mode is applied before first
+    paint by `theme-init.js` (set in `<head>` before any CSS) and persisted in
+    `localStorage['tb-theme']` (light / dark / system).
+35. **CSP forbids inline scripts — externalised all JS (theme).** The CSP
+    (`script-src 'self' cdn.jsdelivr.net`) silently blocked every inline
+    `<script type="module">` (theme bootstrap, notifications read-all,
+    institutions search, register validation) and the old theme-init inline
+    script never ran in production. All moved to files under `static/js/`;
+    the theme bootstrap is a classic script in `<head>`.
+36. **Shared 1200px container on every page (U1-U3).** `.tb-container` /
+    `.container` share one rule (max-width 1200px, fluid padding). Pages that
+    lacked a wrapper (browse, claims, profile, notifications, dashboard,
+    report/match detail, QR landing) were wrapped; `.section-pad` uses
+    `padding-block` so the shorthand cannot zero the container's horizontal
+    padding again (that exact bug caused an 8px overflow on the landing page).
+37. **Tables scroll inside their card (U-restart).** Admin tables are wrapped
+    in `.table-scroll` (min-width 640px inside a horizontally scrolling
+    container) so the page itself never scrolls horizontally at 375px.
+38. **Report form is a 4-step wizard with autosave (theme).** Steps: Photos →
+    What is it → Where/when → Review. Progress bar, Back/Next with inline
+    per-step validation, review summary, sticky bottom action row on phones;
+    text/category/custody draft autosaves to localStorage (photos cannot be
+    persisted and are treated as optional), draft cleared after submit.
+    Leaflet gets `invalidateSize()` when the map step becomes visible.
+39. **Profile page rebuilt (theme).** The committed profile.html was truncated
+    mid-attribute (no closing tags, no `{% endblock %}`) — /profile could not
+    render. Rewritten as a two-column card layout (details + change password)
+    matching auth.js's `profile-form` / `password-form` ids.
+40. **AA contrast verified with axe-core (theme).** axe-core runs in
+    `tests/test_ui_theme.py` and fails on any critical/serious violation on 6
+    key pages; fixes applied: amber buttons/badges use `--amber-700`
+    (#92400E), muted text #5A6472, underline on auth links, aria-label on the
+    browse category select. Playwright tests also assert zero horizontal
+    overflow on every page at 375/768/1280 and theme persistence across
+    reload.
