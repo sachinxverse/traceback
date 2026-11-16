@@ -1,4 +1,16 @@
 // Leaflet map helpers: report form picker, match comparison, report location.
+// Default centre comes from /api/v1/meta (Part D2) — no hard-coded coordinates.
+let DEFAULT_CENTER = [30.0668, 79.0193];  // temporary; replaced by /api/v1/meta
+fetch('/api/v1/meta').then(r => r.json()).then(d => {
+  if (d.data && d.data.map_default_center) {
+    DEFAULT_CENTER = d.data.map_default_center;
+    window.__tbMetaCenter = d.data.map_default_center;  // admin.js heatmap
+    document.querySelectorAll('.leaflet-container[data-await-center]').forEach(el => {
+      el._tbMap?.setView(DEFAULT_CENTER, 5); el.removeAttribute('data-await-center');
+    });
+  }
+}).catch(() => { /* keep temporary default */ });
+
 document.addEventListener('DOMContentLoaded', () => {
   if (document.getElementById('map-picker')) initPicker();
   if (document.getElementById('match-map')) initMatchMap();
@@ -12,7 +24,7 @@ function tileLayer(map) {
 }
 
 function initPicker() {
-  const map = L.map('map-picker').setView([30.0668, 79.0193], 5);
+  const map = L.map('map-picker').setView(DEFAULT_CENTER, 5);
   document.getElementById('map-picker')._tbMap = map;  // stepper resizes on step show
   tileLayer(map);
   let marker = null;
@@ -80,7 +92,7 @@ function initMatchMap() {
   const pts = [];
   if (!isNaN(lostLat)) { L.marker([lostLat, lostLng]).addTo(map).bindPopup('Lost'); pts.push([lostLat, lostLng]); }
   if (!isNaN(foundLat)) { L.marker([foundLat, foundLng]).addTo(map).bindPopup('Found'); pts.push([foundLat, foundLng]); }
-  if (pts.length === 1) map.setView(pts[0], 13); else if (pts.length > 1) map.fitBounds(pts); else map.setView([30.0668, 79.0193], 5);
+  if (pts.length === 1) map.setView(pts[0], 13); else if (pts.length > 1) map.fitBounds(pts); else map.setView(DEFAULT_CENTER, 5);
 }
 
 function initReportMap() {

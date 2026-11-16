@@ -13,13 +13,23 @@ from ..models.enums import (
     ReportStatus,
     Role,
 )
-from ..schemas import AdminUserPatchSchema, RemoveReportSchema, ResolveSchema, load_json
+from ..schemas import (AdminUserCreateSchema, AdminUserPatchSchema,
+                        RemoveReportSchema, ResolveSchema, load_json)
 from ..services.audit import log_action
 from ..services.notifications import notify
-from ._auth import current_user, roles_required
+from ._auth import current_user, portal_required, roles_required, session_portal
 from ._paging import page_params, paginated
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
+
+
+@admin_bp.before_request
+def _require_admin_portal():
+    """B1.3: every /api/v1/admin/* call needs a token with portal=admin.
+    (Role checks stay per-route: most also require the ADMIN role.)"""
+    if session_portal() != "admin":
+        from .. import ApiError
+        raise ApiError("FORBIDDEN", "Not allowed", status=403)
 
 
 def _staff_scope(user, query):
@@ -72,6 +82,39 @@ def patch_user(user_id):
     log_action("user_update", actor=admin, target_type="user", target_id=user.id,
                details={"before": before, "after": user.to_dict()})
     return jsonify({"data": user.to_dict()})
+
+
+@admin_bp.post("/users")
+@roles_required(Role.ADMIN)
+def create_user():
+    """B1.6: admins create staff/admin accounts directly (no self-registration).
+    Created accounts are email_verified so they can use their portal at once."""
+    admin = current_user()
+    data = load_json(AdminUserCreateSchema(), request.get_json(silent=True) or {})
+    email = (data["email"] or "").strip().lower()
+    if User.query.filter_by(email=email).first():
+        raise ApiError("CONFLICT", "An account with this email already exists", status=409)
+    role = Role(data["role"])
+    institution_id = data.get("institution_id")
+    if role == Role.STAFF:
+        if not institution_id:
+            raise ApiError("VALIDATION_ERROR", "Institution required",
+                           details={"institution_id": ["STAFF accounts need an institution"]})
+        from ..models import Institution
+        if db.session.get(Institution, institution_id) is None:
+            raise ApiError("VALIDATION_ERROR", "Unknown institution",
+                           details={"institution_id": ["No such institution"]})
+    elif institution_id:
+        institution_id = None
+    user = User(name=data["name"].strip(), email=email, phone=data.get("phone"),
+                role=role, institution_id=institution_id, email_verified=True)
+    user.set_password(data["password"])
+    db.session.add(user)
+    db.session.commit()
+    log_action("user_create", actor=admin, target_type="user", target_id=user.id,
+               details={"role": role.value, "institution_id": institution_id})
+    db.session.commit()
+    return jsonify({"data": user.to_dict()}), 201
 
 
 # ------------------------------------------------------------------ reports

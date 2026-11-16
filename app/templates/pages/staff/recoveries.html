@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import status_pill, empty_state %}
+{% block title %}Recoveries — TRACEBACK{% endblock %}
+{% block content %}
+<div class="tb-container page-top portal-strip" style="--strip:var(--teal-600)">
+  <div class="page-head">
+    <div>
+      <div class="section-label" style="color:var(--teal-700)">Staff Portal</div>
+      <h1 class="mb-0">Recoveries</h1>
+    </div>
+  </div>
+  {% if claims %}
+  <div class="table-scroll card p-3"><table class="table align-middle mb-0">
+    <thead><tr><th>Claim</th><th>Lost item</th><th>Handed over</th><th>Confirmed</th></tr></thead>
+    <tbody>
+      {% for c in claims %}
+      <tr>
+        <td><a href="/claims/{{ c.id }}">Claim #{{ c.id }}</a></td>
+        <td>{{ c.match.lost_report.title }}</td>
+        <td class="small">{{ c.handed_over_at.strftime('%Y-%m-%d %H:%M') if c.handed_over_at else '—' }}</td>
+        <td class="small">{{ c.received_confirmed_at.strftime('%Y-%m-%d %H:%M') if c.received_confirmed_at else '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}
+  {{ empty_state('bi-patch-check', 'No recoveries yet',
+      'Completed handovers at your institution will be listed here.') }}
+  {% endif %}
+</div>
+{% endblock %}

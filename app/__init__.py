@@ -98,12 +98,15 @@ def create_app(config_name=None, **overrides):
     from .api.institutions import institutions_bp
     from .api.matches import matches_bp
     from .api.messages import messages_bp
+    from .api.meta import meta_bp
     from .api.notifications import notifications_bp
     from .api.reports import reports_bp
+    from .api.staff import staff_bp
     from .web.routes import web_bp
 
     for bp in (auth_bp, reports_bp, images_bp, matches_bp, claims_bp, messages_bp,
-               notifications_bp, institutions_bp, admin_bp, health_bp):
+               notifications_bp, institutions_bp, admin_bp, health_bp, meta_bp,
+               staff_bp):
         own = bp.url_prefix or ""
         app.register_blueprint(bp, url_prefix="/api/v1" + own)
     app.register_blueprint(web_bp)

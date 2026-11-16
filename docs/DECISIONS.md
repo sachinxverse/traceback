@@ -109,3 +109,53 @@ as required by Section 1.2 and acceptance criterion A16.
     browse category select. Playwright tests also assert zero horizontal
     overflow on every page at 375/768/1280 and theme persistence across
     reload.
+41. **Three separate login portals (Part B).** `/login` (user), `/staff/login`,
+    `/admin/login`, each with its own branding strip, copy and API
+    (`/api/v1/auth/{user,staff,admin}/*` sharing one service). Wrong-portal
+    credentials fail with the same generic "Invalid credentials" as a wrong
+    password and are written to `audit_logs` (`login_wrong_portal`). The JWT
+    carries a `portal` claim; `/api/v1/admin/*` requires `portal=admin`,
+    `/api/v1/staff/*` requires `portal=staff` (blueprint `before_request`
+    guards), and staff-only dashboards moved from `/admin` to `/staff`
+    (institution-scoped reports/claims/recoveries/analytics/QR poster).
+    Admin > Users can now create staff/admin accounts
+    (`POST /api/v1/admin/users`) with an institution selector for staff.
+42. **Mandatory OTP on every login (Part C).** Two-step login: step 1 returns
+    `otp_required` + challenge id and sets NO cookies; step 2 verifies the
+    code and is the only path that issues session cookies. Codes: 6 digits
+    from `secrets.randbelow`, stored as HMAC-SHA256 (key = SECRET_KEY, message
+    = challenge_id:code), verified with `hmac.compare_digest`, single-use,
+    5-minute expiry, 5 wrong attempts → challenge locked, 30 s resend cooldown,
+    3 resends max, 5 requests per email per hour, bound to portal + purpose +
+    IP/UA hash. Only LOGIN/REGISTER challenges can complete a login (a
+    PASSWORD_RESET challenge can never sign someone in). Registration creates
+    unverified accounts and requires an OTP; unverified users cannot log in.
+    Forgot-password and password/phone changes require fresh
+    SENSITIVE_ACTION/PASSWORD_RESET OTPs; a reset bumps `token_version` so all
+    existing sessions die. OTP_DEV_ECHO exists only for development and
+    production refuses to start when it is set (or when MAIL_ENABLED=false
+    without an alternative sender).
+43. **Session revocation model.** Logging into a second portal blocklists the
+    browser's current token jti before issuing the new session (B1.4);
+    password reset/change bumps `users.token_version` which is embedded as the
+    `tv` claim and checked in `current_user()` — one int bump revokes tokens
+    across all devices without per-jti bookkeeping.
+44. **OTP delivery channel interface (C3).** `OtpSender` with `EmailOtpSender`
+    (Flask-Mail, default), `ConsoleOtpSender` (development: prints to the
+    server console only), `SmsOtpSender` (pluggable adapter; needs a paid
+    provider and E.164 numbers) and `TestingOtpSender` (test double recording
+    codes in memory). There is no skip-OTP switch anywhere.
+45. **Data-driven UI (Part D).** New `GET /api/v1/meta` serves
+    categories/institution types/statuses/map centre/limits to JS;
+    `GET /api/v1/stats/public` (5-minute cache) feeds the landing counters.
+    The localhost fallback in the QR builder was removed, `MAP_DEFAULT_CENTER`
+    moved to config, login lockout thresholds moved to config. Admin
+    institutions verified toggle is now wired end-to-end; admin Users edit
+    uses a real modal (no browser `prompt`); admin claims filter tabs are
+    real buttons. `seed-demo` refuses to run in production.
+46. **UI audit (Part A).** Full Playwright crawl of every page × role × 375/1280
+    with per-element classification is in `docs/UI_AUDIT.md`; final state: every
+    element WORKS or was implemented-for-real; a guard test
+    (`test_no_bypass.py::test_no_hardcoded_localhost_or_dummy_links`) fails the
+    build on `localhost`, `javascript:` URLs, dead `href="#"` anchors, and demo
+    credentials in templates/JS.

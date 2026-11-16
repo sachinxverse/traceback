@@ -128,6 +128,9 @@ def _placeholder_image(colour, label, size=(320, 320)):
 
 
 def run_seed(app):
+    # D2: demo data is for development/demos only — never in production.
+    if app.config.get("APP_CONFIG", "") == "production" and not __import__("os").environ.get("ALLOW_SEED_IN_PRODUCTION"):
+        raise RuntimeError("flask seed-demo refuses to run when APP_CONFIG=production")
     created = {"users": 0, "institutions": 0, "reports": 0}
     if User.query.filter_by(email="admin@traceback.local").first():
         return "already seeded"

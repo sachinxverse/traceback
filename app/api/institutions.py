@@ -100,4 +100,4 @@ def qr_png(inst_id):
 
 def _base_url():
     from flask import current_app
-    return current_app.config.get("BASE_URL", "http://localhost:5000").rstrip("/")
+    return current_app.config.get("BASE_URL", "").rstrip("/")

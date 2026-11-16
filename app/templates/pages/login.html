@@ -1,14 +1,25 @@
 {% extends "base.html" %}
-{% block title %}Log in — TRACEBACK{% endblock %}
+{% set cfg = {
+  'user':   {'title': 'Welcome back', 'strip': 'var(--blue-600)', 'endpoint': 'user',
+             'note': '', 'icon': 'bi-person-circle'},
+  'staff':  {'title': 'Staff Portal', 'strip': 'var(--teal-600)', 'endpoint': 'staff',
+             'note': 'This area is for authorised staff only.', 'icon': 'bi-building-gear'},
+  'admin':  {'title': 'Admin Portal', 'strip': 'var(--navy-900)', 'endpoint': 'admin',
+             'note': 'This area is for authorised staff only.', 'icon': 'bi-shield-lock'},
+} %}{% set p = cfg[portal] %}
+{% block title %}{{ p.title }} — TRACEBACK{% endblock %}
 {% block content %}
-<div class="tb-container page-top">
+<div class="tb-container page-top portal-strip" style="--strip:{{ p.strip }}">
   <div class="row justify-content-center"><div class="col-md-5 col-lg-4">
     <div class="card p-4 auth-card">
       <div class="text-center mb-3">
-        <span class="brand-mark mx-auto mb-2" style="width:44px;height:44px"><i class="bi bi-geo-alt-fill" aria-hidden="true"></i></span>
-        <h1 class="h2 mb-1">Welcome back</h1>
-        <p class="mb-0 small">Log in to track your reports, matches and claims.</p>
+        <span class="brand-mark mx-auto mb-2" style="width:44px;height:44px;background:{{ p.strip }}"><i class="bi {{ p.icon }}" aria-hidden="true"></i></span>
+        <h1 class="h2 mb-1">{{ p.title }}</h1>
+        {% if p.note %}<div class="small mb-0 text-muted">{{ p.note }}</div>{% endif %}
+        {% if portal == 'user' %}<p class="mb-0 small">Log in to track your reports, matches and claims.</p>{% endif %}
       </div>
+
+      {# ---------------------------------------------------------------- step 1 #}
       <form id="login-form" novalidate>
         <div class="form-field">
           <label class="form-label" for="email">Email</label>
@@ -27,12 +38,45 @@
           </div>
         </div>
         <button class="btn btn-primary w-100" type="submit">
-          <span class="btn-label"><i class="bi bi-box-arrow-in-right me-1" aria-hidden="true"></i>Log in</span>
-          <span class="btn-spin d-none"><span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>Logging in…</span>
+          <span class="btn-label">Continue</span>
+          <span class="btn-spin d-none"><span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>Checking…</span>
         </button>
+        <div class="form-error" id="login-error" role="alert"></div>
+        {% if portal == 'user' %}
+        <p class="mt-2 mb-0 small"><a href="/forgot-password">Forgot password?</a></p>
+        {% endif %}
       </form>
-      <p class="mt-3 mb-0 small">No account? <a href="/register">Register</a></p>
+
+      {# ---------------------------------------------------------------- step 2: OTP #}
+      <div id="otp-step" class="d-none" aria-live="polite">
+        <div class="text-center mb-2 small">
+          We sent a 6-digit code to<br><strong id="otp-destination">your email</strong>
+        </div>
+        <div class="otp-boxes" role="group" aria-label="6-digit verification code">
+          {% for i in range(6) %}
+          <input class="form-control otp-digit" maxlength="1" inputmode="numeric"
+                 autocomplete="{{ 'one-time-code' if i == 0 else 'off' }}"
+                 aria-label="Digit {{ i + 1 }}" {% if i == 0 %}autofocus{% endif %}>
+          {% endfor %}
+        </div>
+        <div class="form-error" id="otp-error" role="alert"></div>
+        <div class="d-flex justify-content-between small my-2">
+          <span>Expires in <strong id="otp-countdown">5:00</strong></span>
+          <button class="btn btn-link btn-sm p-0" id="otp-resend" type="button" disabled>Resend code</button>
+        </div>
+        <button class="btn btn-primary w-100" id="otp-verify" type="button">
+          <span class="btn-label">Verify &amp; sign in</span>
+          <span class="btn-spin d-none"><span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>Verifying…</span>
+        </button>
+        <button class="btn btn-ghost w-100 mt-2" id="otp-back" type="button">Back — change email</button>
+        {% if portal != 'user' %}<p class="small text-center mt-2 mb-0">Sign-in requires a verification code on every login.</p>{% endif %}
+      </div>
+
+      {% if portal == 'user' %}<p class="mt-3 mb-0 small">No account? <a href="/register">Register</a></p>{% endif %}
     </div>
   </div></div>
 </div>
+{% endblock %}
+{% block scripts %}
+<script type="module" src="/static/js/portal-login.js" data-portal="{{ portal }}"></script>
 {% endblock %}

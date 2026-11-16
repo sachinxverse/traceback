@@ -113,12 +113,12 @@ def test_staff_scope_limited_to_own_institution(client, db):
     client.post("/api/v1/auth/logout")
 
     # staff of institution 2 must not see it
-    login(client, "s2@x.com")
+    login(client, "s2@x.com", portal="staff")
     assert client.get(f"/api/v1/reports/{rid}").status_code == 404
     client.post("/api/v1/auth/logout")
 
     # staff of institution 1 can see it (full view)
-    login(client, "s1@x.com")
+    login(client, "s1@x.com", portal="staff")
     r = client.get(f"/api/v1/reports/{rid}")
     assert r.status_code == 200
     assert r.get_json()["data"]["institution_id"] == inst1.id

@@ -3,8 +3,15 @@ from tests.conftest import login, register
 
 
 def test_register_login_logout_cycle(client, db):
-    r = register(client, "a@test.com")
+    from tests.conftest import _complete_register
+    # raw register returns 201 + OTP challenge, NO cookies yet (Part C)
+    r = client.post("/api/v1/auth/register", json={
+        "name": "Test A", "email": "a@test.com", "password": "Password1"})
     assert r.status_code == 201, r.get_data(as_text=True)
+    assert r.get_json()["data"]["otp_required"] is True
+    assert client.get_cookie("access_token_cookie") is None  # not logged in before OTP
+    r = _complete_register(client, "a@test.com", r)
+    assert r.status_code == 200
     r = login(client, "a@test.com")
     assert r.status_code == 200
 
@@ -25,7 +32,7 @@ def test_register_login_logout_cycle(client, db):
 
 
 def test_duplicate_email_conflict(client):
-    assert register(client, "dup@test.com").status_code == 201
+    assert register(client, "dup@test.com").status_code == 200
     r = register(client, "dup@test.com")
     assert r.status_code == 409
 
@@ -75,9 +82,15 @@ def test_refresh_endpoint(client):
 def test_change_password_revokes_old_tokens(client):
     register(client, "f@test.com", password="Password1")
     login(client, "f@test.com", "Password1")
+    # C1.5: sensitive-action OTP required first
+    ch = client.post("/api/v1/auth/sensitive-otp")
+    assert ch.status_code == 200
+    from tests.conftest import otp_code
+    code = otp_code("f@test.com", "SENSITIVE_ACTION")
     r = client.post("/api/v1/auth/change-password", json={
-        "current_password": "Password1", "new_password": "NewPassw0rd"})
-    assert r.status_code == 200
+        "current_password": "Password1", "new_password": "NewPassw0rd",
+        "otp_challenge_id": ch.get_json()["data"]["challenge_id"], "otp": code})
+    assert r.status_code == 200, r.get_data(as_text=True)
 
 
 def test_csrf_required_on_state_change(client, db):

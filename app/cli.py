@@ -37,7 +37,8 @@ def register(app):
     @app.cli.command("seed-demo")
     @click.option("--reset", is_flag=True)
     def seed_demo(reset):
-        """Load demo data (Section 15.2); idempotent unless --reset."""
+        """Load demo data (Section 15.2); idempotent unless --reset.
+        D2: refuses to run when APP_CONFIG=production."""
         from app.extensions import db
         with app.app_context():
             if reset:
@@ -46,6 +47,15 @@ def register(app):
             from scripts.seed_demo import run_seed
             created = run_seed(app)
             click.echo(f"Seed complete: {created}")
+
+    @app.cli.command("purge-otp")
+    def purge_otp():
+        """Delete expired OTP challenges (Part C4)."""
+        from app.extensions import db
+        from app.services.otp import purge_expired
+        with app.app_context():
+            n = purge_expired()
+            click.echo(f"Purged {n} expired OTP challenges.")
 
     @app.cli.command("reindex")
     def reindex():

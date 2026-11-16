@@ -2,7 +2,7 @@
 from datetime import UTC, datetime
 
 from flask import Blueprint, abort, redirect, render_template, request
-from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+from flask_jwt_extended import get_jwt, get_jwt_identity, verify_jwt_in_request
 
 from ..extensions import db
 from ..models import Institution, Report, User
@@ -20,10 +20,20 @@ def _current_user():
         return None
 
 
+def _session_portal():
+    """The portal claim of the browser's token, or None."""
+    try:
+        verify_jwt_in_request()
+        return get_jwt().get("portal", "user")
+    except Exception:  # noqa: BLE001
+        return None
+
+
 @web_bp.app_context_processor
 def inject_globals():
     return {
         "nav_user": _current_user(),
+        "nav_portal": _session_portal(),
         "now": datetime.now(UTC).replace(tzinfo=None),
     }
 
@@ -35,20 +45,30 @@ def _require_login():
     return user
 
 
-def _require_admin():
-    user = _require_login()
-    if user.role.value == "USER":
-        abort(404)
+def _require_portal(portal_name):
+    """Part B1.3: web area guard. Wrong portal -> that portal's login page."""
+    user = _current_user()
+    if user is None:
+        abort(redirect(f"/{portal_name}/login" if portal_name != "user"
+                       else "/login?next=" + request.path))
+    if _session_portal() != portal_name or (
+            portal_name == "admin" and user.role.value != "ADMIN") or (
+            portal_name == "staff" and user.role.value != "STAFF"):
+        abort(redirect(f"/{portal_name}/login"))
     return user
+
+
+def _require_admin():
+    """Admin pages: ADMIN role + admin-portal session only."""
+    return _require_portal("admin")
 
 
 @web_bp.get("/")
 def index():
-    from ..models import Institution, Report
+    from ..api.meta import public_stats_data, STATS_TTL_SECONDS
     recovered = Report.query.filter_by(status="RECOVERED").count()
     insts = Institution.query.filter_by(is_active=True).all()
-    stats = {"recovered": recovered, "institutions": len(insts),
-             "reports": Report.query.count()}
+    stats = public_stats_data()
     return render_template("pages/index.html", stats=stats, institutions=insts)
 
 
@@ -81,7 +101,22 @@ def register_page():
 
 @web_bp.get("/login")
 def login_page():
-    return render_template("pages/login.html")
+    return render_template("pages/login.html", portal="user")
+
+
+@web_bp.get("/staff/login")
+def staff_login_page():
+    return render_template("pages/login.html", portal="staff")
+
+
+@web_bp.get("/admin/login")
+def admin_login_page():
+    return render_template("pages/login.html", portal="admin")
+
+
+@web_bp.get("/forgot-password")
+def forgot_password_page():
+    return render_template("pages/forgot_password.html")
 
 
 @web_bp.get("/dashboard")
@@ -307,3 +342,102 @@ def admin_audit():
     from ..models import AuditLog
     logs = AuditLog.query.order_by(AuditLog.timestamp.desc()).limit(200).all()
     return render_template("pages/admin/audit.html", logs=logs)
+
+
+# ------------------------------------------------------------------ staff portal (B1.8)
+def _staff_inst_or_404(user):
+    if user.institution_id is None:
+        abort(404)
+    return db.session.get(Institution, user.institution_id)
+
+
+@web_bp.get("/staff")
+def staff_home():
+    user = _require_portal("staff")
+    inst = _staff_inst_or_404(user)
+    reports = (Report.query.filter_by(institution_id=inst.id)
+               .order_by(Report.created_at.desc()).limit(8).all())
+    claims = _staff_reviewable(user, inst.id)
+    recovered = Report.query.filter_by(institution_id=inst.id, status="RECOVERED").count()
+    active = Report.query.filter(Report.institution_id == inst.id).filter(
+        Report.status.in_(["ACTIVE", "MATCHED"])).count()
+    found_total = Report.query.filter_by(institution_id=inst.id, report_type="FOUND").count()
+    return render_template("pages/staff/dashboard.html", user=user, institution=inst,
+                           reports=reports, claims=claims, cards={
+                               "active": active, "recovered": recovered,
+                               "found": found_total, "pending_claims": len(claims)})
+
+
+def _staff_reviewable(user, inst_id):
+    """Claims on matches whose FOUND report belongs to the staff's institution."""
+    from ..models import Claim, Match
+    rows = (Claim.query.join(Match, Claim.match_id == Match.id)
+            .join(Report, Match.found_report_id == Report.id)
+            .filter(Report.institution_id == inst_id)
+            .order_by(Claim.created_at.desc()).limit(100).all())
+    return [c for c in rows
+            if c.verification_status.value in ("PENDING", "DISPUTED", "APPROVED", "REJECTED")]
+
+
+@web_bp.get("/staff/reports")
+def staff_reports():
+    user = _require_portal("staff")
+    inst = _staff_inst_or_404(user)
+    from ..models import Match
+    q = request.args.get("q", "").strip()
+    query = Report.query.filter_by(institution_id=inst.id)
+    if q:
+        query = query.filter((Report.title.ilike(f"%{q}%")) | (Report.description.ilike(f"%{q}%")))
+    rows = query.order_by(Report.created_at.desc()).limit(200).all()
+    data = []
+    for r in rows:
+        mq = Match.query.filter(Match.status != "EXPIRED").filter(
+            (Match.lost_report_id == r.id) | (Match.found_report_id == r.id))
+        data.append({"report": r, "match_count": mq.count()})
+    return render_template("pages/staff/reports.html", user=user, institution=inst,
+                           rows=data, q=q)
+
+
+@web_bp.get("/staff/claims")
+def staff_claims():
+    user = _require_portal("staff")
+    inst = _staff_inst_or_404(user)
+    claims = _staff_reviewable(user, inst.id)
+    return render_template("pages/staff/claims.html", user=user, institution=inst, claims=claims)
+
+
+@web_bp.get("/staff/recoveries")
+def staff_recoveries():
+    user = _require_portal("staff")
+    inst = _staff_inst_or_404(user)
+    from ..models import Claim, Match
+    rows = (Claim.query.join(Match, Claim.match_id == Match.id)
+            .join(Report, Match.found_report_id == Report.id)
+            .filter(Report.institution_id == inst.id,
+                    Claim.verification_status == "COMPLETED")
+            .order_by(Claim.id.desc()).limit(100).all())
+    return render_template("pages/staff/recoveries.html", user=user, institution=inst, claims=rows)
+
+
+@web_bp.get("/staff/analytics")
+def staff_analytics():
+    user = _require_portal("staff")
+    inst = _staff_inst_or_404(user)
+    reports = Report.query.filter_by(institution_id=inst.id)
+    from ..models.enums import ReportStatus
+    counts = {
+        "total": reports.count(),
+        "active": reports.filter_by(status=ReportStatus.ACTIVE).count(),
+        "claim_pending": reports.filter_by(status=ReportStatus.CLAIM_PENDING).count(),
+        "recovered": reports.filter_by(status=ReportStatus.RECOVERED).count(),
+        "lost": reports.filter_by(report_type="LOST").count(),
+        "found": reports.filter_by(report_type="FOUND").count(),
+    }
+    return render_template("pages/staff/analytics.html", user=user, institution=inst, counts=counts)
+
+
+@web_bp.get("/staff/poster")
+def staff_poster():
+    user = _require_portal("staff")
+    inst = _staff_inst_or_404(user)
+    return render_template("pages/staff/poster.html", user=user, institution=inst)

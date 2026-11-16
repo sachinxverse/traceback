@@ -91,17 +91,66 @@ volume). The app runs fine on CPU.
 
 ## Demo accounts (after `flask seed-demo`)
 
-| Role  | Email                  | Password    |
-|-------|------------------------|-------------|
-| Admin | admin@traceback.local  | Admin@12345 |
-| Staff | staff@traceback.local  | Staff@12345 |
-| User  | alice@example.com      | User@12345  |
-| User  | bob@example.com        | User@12345  |
-| User  | carol@example.com      | User@12345  |
+| Role  | Email                  | Password    | Portal          |
+|-------|------------------------|-------------|-----------------|
+| Admin | admin@traceback.local  | Admin@12345 | `/admin/login`  |
+| Staff | staff@traceback.local  | Staff@12345 | `/staff/login`  |
+| User  | alice@example.com      | User@12345  | `/login`        |
+| User  | bob@example.com        | User@12345  | `/login`        |
+| User  | carol@example.com      | User@12345  | `/login`        |
 
 The seed also creates 3 institutions, 14 reports (5 true pairs + distractors)
 with generated placeholder images, running matches, one pending claim, one
 completed recovery and one disputed claim, plus `scripts/labels.csv`.
+
+## Separate login portals + mandatory OTP (Parts B/C)
+
+There are three completely separate portals:
+
+| Portal | Login page | API | After login |
+|---|---|---|---|
+| User (owners/finders) | `/login` (+ `/register`) | `POST /api/v1/auth/user/*` | `/dashboard` |
+| Institution staff | `/staff/login` | `POST /api/v1/auth/staff/*` | `/staff` |
+| Administrator | `/admin/login` | `POST /api/v1/auth/admin/*` | `/admin` |
+
+- Credentials for the wrong role fail with the same generic "Invalid credentials"
+  message as a wrong password, and the attempt is written to `audit_logs`.
+- Every login is two steps: (1) email + password → an OTP challenge;
+  (2) the 6-digit code → session cookies. **No cookies are issued before the
+  OTP is verified.** Codes expire in 5 minutes, are single-use, stored hashed
+  (HMAC-SHA256), lock after 5 wrong attempts, and can be resent with a 30 s
+  cooldown (max 3 resends, 5 per email per hour).
+- The signed token carries a `portal` claim; admin/staff/user areas each
+  reject tokens from another portal.
+- Registration ends with an email-verification OTP; unverified accounts cannot
+  log in. Forgot-password and password/phone changes also require a fresh OTP.
+- Tokens are revoked for every session after a password reset/change.
+
+### Email OTP (SMTP) setup
+
+1. Choose a provider. Any SMTP works; free options:
+   - **Gmail**: enable 2-Step Verification, then create an App Password
+     (Google Account → Security → App passwords) and use it as `MAIL_PASSWORD`.
+   - **Brevo / Mailgun / Resend / SendGrid**: create a free account and use
+     their SMTP host + API key as the password.
+2. Set the environment variables (see `.env.example`):
+
+```dotenv
+MAIL_ENABLED=true
+MAIL_SERVER=smtp-relay.brevo.com        # or smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=your-smtp-login
+MAIL_PASSWORD=your-app-password
+MAIL_DEFAULT_SENDER="TRACEBACK <noreply@yourdomain.com>"
+OTP_SENDER=email
+```
+
+3. Development only: with `MAIL_ENABLED=false` and `APP_CONFIG=development`,
+   the `ConsoleOtpSender` prints the code to the **server console**. You may
+   also set `OTP_DEV_ECHO=true` to show the code in the UI — the app refuses to
+   start in production with that flag.
+4. `flask purge-otp` deletes expired OTP challenges (run it in a cron job or
+   after deployments; it also runs opportunistically).
 
 ## CLI commands
 

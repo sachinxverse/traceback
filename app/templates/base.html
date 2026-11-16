@@ -31,36 +31,52 @@
     </button>
     <div class="collapse navbar-collapse" id="nav">
       <ul class="navbar-nav me-auto align-items-lg-center">
+        {% if nav_portal == 'admin' %}
+        {# Admin portal menu (B1.7): full admin navigation only #}
+        <li class="nav-item"><a class="nav-link" href="/admin" {% if request.path == '/admin' %}aria-current="page"{% endif %}><i class="bi bi-speedometer2 me-1" aria-hidden="true"></i>Dashboard</a></li>
+        <li class="nav-item"><a class="nav-link" href="/admin/reports" {% if request.path == '/admin/reports' %}aria-current="page"{% endif %}>Reports</a></li>
+        <li class="nav-item"><a class="nav-link" href="/admin/claims" {% if request.path == '/admin/claims' %}aria-current="page"{% endif %}>Claims</a></li>
+        <li class="nav-item"><a class="nav-link" href="/admin/users" {% if request.path == '/admin/users' %}aria-current="page"{% endif %}>Users</a></li>
+        <li class="nav-item"><a class="nav-link" href="/admin/institutions" {% if request.path == '/admin/institutions' %}aria-current="page"{% endif %}>Institutions</a></li>
+        <li class="nav-item"><a class="nav-link" href="/admin/recoveries" {% if request.path == '/admin/recoveries' %}aria-current="page"{% endif %}>Recoveries</a></li>
+        <li class="nav-item"><a class="nav-link" href="/admin/audit" {% if request.path == '/admin/audit' %}aria-current="page"{% endif %}>Audit</a></li>
+        {% elif nav_portal == 'staff' %}
+        {# Staff portal menu (B1.7): institution-scoped navigation only #}
+        <li class="nav-item"><a class="nav-link" href="/staff" {% if request.path == '/staff' %}aria-current="page"{% endif %}><i class="bi bi-speedometer2 me-1" aria-hidden="true"></i>Dashboard</a></li>
+        <li class="nav-item"><a class="nav-link" href="/staff/reports" {% if request.path == '/staff/reports' %}aria-current="page"{% endif %}>Institution reports</a></li>
+        <li class="nav-item"><a class="nav-link" href="/staff/claims" {% if request.path == '/staff/claims' %}aria-current="page"{% endif %}>Claims to review</a></li>
+        <li class="nav-item"><a class="nav-link" href="/staff/recoveries" {% if request.path == '/staff/recoveries' %}aria-current="page"{% endif %}>Recoveries</a></li>
+        <li class="nav-item"><a class="nav-link" href="/staff/poster" {% if request.path == '/staff/poster' %}aria-current="page"{% endif %}>QR poster</a></li>
+        <li class="nav-item"><a class="nav-link" href="/staff/analytics" {% if request.path == '/staff/analytics' %}aria-current="page"{% endif %}>Analytics</a></li>
+        {% else %}
         <li class="nav-item"><a class="nav-link" href="/report/lost" {% if request.path == '/report/lost' %}aria-current="page"{% endif %}><span class="nav-dot lost" aria-hidden="true"></span>Report Lost</a></li>
         <li class="nav-item"><a class="nav-link" href="/report/found" {% if request.path == '/report/found' %}aria-current="page"{% endif %}><span class="nav-dot found" aria-hidden="true"></span>Report Found</a></li>
         {% if nav_user %}
         <li class="nav-item"><a class="nav-link" href="/dashboard" {% if request.path == '/dashboard' %}aria-current="page"{% endif %}>My Reports</a></li>
         {% endif %}
         <li class="nav-item"><a class="nav-link" href="/institutions" {% if request.path == '/institutions' %}aria-current="page"{% endif %}>Institutions</a></li>
-        {% if nav_user and nav_user.role.value != 'USER' %}
-        <li class="nav-item"><a class="nav-link" href="/admin" {% if request.path.startswith('/admin') %}aria-current="page"{% endif %}><i class="bi bi-speedometer2 me-1" aria-hidden="true"></i>Admin</a></li>
         {% endif %}
       </ul>
       <ul class="navbar-nav align-items-lg-center">
         {% if nav_user %}
+        {% if nav_portal != 'admin' and nav_portal != 'staff' %}
         <li class="nav-item dropdown position-relative">
           <a class="nav-link" href="/notifications" id="notif-bell" aria-label="Notifications">
             <i class="bi bi-bell" aria-hidden="true"></i><span id="unread-badge" class="notif-badge d-none"></span>
           </a>
           <div id="notif-dropdown" class="notif-dropdown"></div>
         </li>
+        {% endif %}
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-label="Account menu for {{ nav_user.first_name }}">
-            <i class="bi bi-person-circle me-1" aria-hidden="true"></i>{{ nav_user.first_name }}
+            <i class="bi bi-person-circle me-1" aria-hidden="true"></i>{{ nav_user.first_name }}{% if nav_portal == 'admin' %} · Admin{% elif nav_portal == 'staff' %} · Staff{% endif %}
           </a>
           <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="border-radius:12px">
-            <li><a class="dropdown-item" href="/profile"><i class="bi bi-person me-2" aria-hidden="true"></i>Profile</a></li>
-            {% if nav_user.role.value != 'USER' %}<li><a class="dropdown-item" href="/admin"><i class="bi bi-speedometer2 me-2" aria-hidden="true"></i>Admin portal</a></li>{% endif %}
-            <li><hr class="dropdown-divider"></li>
+            {% if nav_portal != 'admin' and nav_portal != 'staff' %}<li><a class="dropdown-item" href="/profile"><i class="bi bi-person me-2" aria-hidden="true"></i>Profile</a></li>{% endif %}
             <li><button class="dropdown-item theme-toggle" id="theme-toggle" type="button" aria-label="Switch colour theme">
               <i class="bi bi-circle-half me-2" aria-hidden="true"></i>Theme: <span id="theme-current">light</span></button></li>
             <li><hr class="dropdown-divider"></li>
-            <li><button class="dropdown-item" id="logout-btn"><i class="bi bi-box-arrow-right me-2" aria-hidden="true"></i>Logout</button></li>
+            <li><button class="dropdown-item" id="logout-btn" type="button"><i class="bi bi-box-arrow-right me-2" aria-hidden="true"></i>Logout</button></li>
           </ul>
         </li>
         {% else %}
@@ -89,6 +105,10 @@
       <div class="small">
         <i class="bi bi-shield-check me-1" aria-hidden="true"></i>
         Matches are recommendations, not proof of ownership.
+      </div>
+      <div class="small ms-auto d-flex gap-3">
+        <a href="/staff/login" class="text-muted">Staff sign in</a>
+        <a href="/admin/login" class="text-muted">Admin sign in</a>
       </div>
     </div>
   </div>

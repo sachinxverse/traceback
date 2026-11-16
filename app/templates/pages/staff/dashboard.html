@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import status_pill, type_badge %}
+{% block title %}Staff dashboard — TRACEBACK{% endblock %}
+{% block content %}
+<div class="tb-container page-top portal-strip" style="--strip:var(--teal-600)">
+  <div class="page-head">
+    <div>
+      <div class="section-label" style="color:var(--teal-700)">Staff Portal</div>
+      <h1 class="mb-1">{{ institution.name }}</h1>
+      <p class="mb-0">Institution dashboard — everything here is scoped to your institution.</p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <a class="btn btn-sm btn-found" href="/staff/reports">All reports</a>
+      <a class="btn btn-sm btn-teal" href="/staff/claims">Claims to review ({{ cards.pending_claims }})</a>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    {% for label, value, cls in [('Active reports', cards.active, 'kpi-blue'),
+                                 ('Found items', cards.found, 'kpi-teal'),
+                                 ('Claims to review', cards.pending_claims, 'kpi-amber'),
+                                 ('Recovered', cards.recovered, 'kpi-green')] %}
+    <div class="col-6 col-md-3">
+      <div class="card p-3 kpi-card {{ cls }}">
+        <div class="kpi-value">{{ value }}</div>
+        <div class="kpi-label">{{ label }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="card p-4 mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h5 class="mb-0">Latest institution reports</h5>
+      <a class="btn btn-sm btn-outline-secondary" href="/staff/reports">View all</a>
+    </div>
+    {% if reports %}
+    <div class="table-scroll"><table class="table align-middle mb-0">
+      <thead><tr><th>Report</th><th>Type</th><th>Status</th><th>Date</th></tr></thead>
+      <tbody>
+        {% for r in reports %}
+        <tr><td><a href="/reports/{{ r.id }}">{{ r.title }}</a></td>
+            <td>{{ type_badge(r.report_type.value) }}</td>
+            <td>{{ status_pill(r.status.value) }}</td>
+            <td class="small">{{ r.created_at.strftime('%Y-%m-%d %H:%M') }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}
+    {% from "macros/ui.html" import empty_state %}
+    {{ empty_state('bi-inbox', 'No reports yet',
+        'When visitors report lost or found items at your institution, they appear here.') }}
+    {% endif %}
+  </div>
+
+  <div class="card p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h5 class="mb-0">Claims awaiting review</h5>
+      <a class="btn btn-sm btn-outline-secondary" href="/staff/claims">Review</a>
+    </div>
+    {% if claims %}
+    <div class="table-scroll"><table class="table align-middle mb-0">
+      <thead><tr><th>Claim</th><th>Status</th><th>Lost item</th><th>Date</th></tr></thead>
+      <tbody>
+        {% for c in claims %}
+        <tr><td><a href="/claims/{{ c.id }}">Claim #{{ c.id }}</a></td>
+            <td>{{ status_pill(c.verification_status.value) }}</td>
+            <td>{{ c.match.lost_report.title }}</td>
+            <td class="small">{{ c.created_at.strftime('%Y-%m-%d %H:%M') }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}
+    <p class="text-muted mb-0">No claims to review right now.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

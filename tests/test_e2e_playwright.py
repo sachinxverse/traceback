@@ -47,7 +47,8 @@ def live_server(tmp_path_factory):
         # with the two regular users; the admin is a setup concern)
         from app.models import User
         from app.models.enums import Role
-        a = User(name="Admin E2E", email="e2e-admin@test.com", role=Role.ADMIN)
+        a = User(name="Admin E2E", email="e2e-admin@test.com", role=Role.ADMIN,
+                 email_verified=True)
         a.set_password("Password1")
         _db.session.add(a)
         _db.session.commit()
@@ -65,20 +66,42 @@ def live_server(tmp_path_factory):
 
 
 def _register(page, base, email, name):
+    """Register through the UI and finish the OTP verification step (Part C)."""
+    from app.services.otp import TestingOtpSender
+    TestingOtpSender.reset()
     page.goto(f"{base}/register")
     page.fill("#name", name)
     page.fill("#email", email)
     page.fill("#password", "Password1")
-    page.click("button[type=submit]")
+    page.click("#register-form button[type=submit]")
+    page.wait_for_selector("#register-otp-step:not(.d-none)", timeout=10000)
+    code = TestingOtpSender.latest(email, "REGISTER")
+    assert code, "no OTP recorded"
+    boxes = page.locator("#register-otp-step .otp-digit")
+    for i, ch in enumerate(code):
+        boxes.nth(i).fill(ch)
+    page.click("#reg-otp-verify")
     page.wait_for_url("**/dashboard", timeout=10000)
 
 
-def _login(page, base, email):
-    page.goto(f"{base}/login")
+def _login(page, base, email, portal="user"):
+    """Two-step login through the UI (Part C)."""
+    from app.services.otp import TestingOtpSender
+    TestingOtpSender.reset()
+    login_path = {"user": "/login", "staff": "/staff/login", "admin": "/admin/login"}[portal]
+    page.goto(f"{base}{login_path}")
     page.fill("#email", email)
     page.fill("#password", "Password1")
-    page.click("button[type=submit]")
-    page.wait_for_url("**/dashboard", timeout=10000)
+    page.click("#login-form button[type=submit]")
+    page.wait_for_selector("#otp-step:not(.d-none)", timeout=10000)
+    code = TestingOtpSender.latest(email)
+    assert code, "no OTP recorded"
+    boxes = page.locator("#otp-step .otp-digit")
+    for i, ch in enumerate(code):
+        boxes.nth(i).fill(ch)
+    page.click("#otp-verify")
+    page.wait_for_url("**/dashboard" if portal == "user" else
+                      ("**/admin" if portal == "admin" else "**/staff"), timeout=10000)
 
 
 def _logout(page):
@@ -169,7 +192,7 @@ def test_e2e_full_recovery_flow(live_server):
         alice.wait_for_selector("text=recovered", timeout=10000)
 
         # 6) the pre-seeded admin logs in and checks analytics
-        _login(admin, base, "e2e-admin@test.com")
+        _login(admin, base, "e2e-admin@test.com", portal="admin")
         admin.goto(f"{base}/admin")
         admin.wait_for_selector("h1:has-text('Admin portal')", timeout=10000)
         # KPI cards load from the analytics summary API

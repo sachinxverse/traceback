@@ -40,5 +40,6 @@ from .claim import Claim  # noqa: F401
 from .institution import Institution  # noqa: F401
 from .match import Match  # noqa: F401
 from .misc import AuditLog, ClaimImage, Message, Notification, TokenBlocklist  # noqa: F401
+from .otp import OtpChallenge  # noqa: F401
 from .report import Report, ReportImage  # noqa: F401
 from .user import User  # noqa: F401

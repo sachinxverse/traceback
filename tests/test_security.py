@@ -18,7 +18,7 @@ def test_rate_limit_login(app, db):
     client2 = app2.test_client()
     codes = []
     for i in range(12):
-        r = client2.post("/api/v1/auth/login", json={
+        r = client2.post("/api/v1/auth/user/login", json={
             "email": "nobody@x.com", "password": "WrongPass1"})
         codes.append(r.status_code)
     assert 429 in codes
@@ -78,6 +78,6 @@ def test_oversize_upload_413(app, client, db):
 
 
 def test_login_does_not_reveal_user_existence(client):
-    r1 = client.post("/api/v1/auth/login", json={"email": "ghost@x.com", "password": "Whatever1"})
-    client.post("/api/v1/auth/login", json={"email": "ghost2@x.com", "password": "x"})
-    assert r1.get_json()["error"]["message"] == "Invalid email or password"
+    r1 = client.post("/api/v1/auth/user/login", json={"email": "ghost@x.com", "password": "Whatever1"})
+    client.post("/api/v1/auth/user/login", json={"email": "ghost2@x.com", "password": "x"})
+    assert r1.get_json()["error"]["message"] == "Invalid credentials"

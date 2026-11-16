@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Analytics — TRACEBACK{% endblock %}
+{% block content %}
+<div class="tb-container page-top portal-strip" style="--strip:var(--teal-600)">
+  <div class="page-head">
+    <div>
+      <div class="section-label" style="color:var(--teal-700)">Staff Portal</div>
+      <h1 class="mb-0">Analytics — {{ institution.name }}</h1>
+    </div>
+  </div>
+  <div class="row g-3 mb-4">
+    {% for label, value in [('Total reports', counts.total), ('Active', counts.active),
+                            ('Matched', counts.matched), ('Recovered', counts.recovered),
+                            ('Lost', counts.lost), ('Found', counts.found)] %}
+    <div class="col-6 col-md-2">
+      <div class="card p-3 text-center">
+        <div class="fs-4 fw-bold">{{ value }}</div>
+        <div class="text-muted small">{{ label }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="card p-4">
+    <h5>Recovery rate</h5>
+    {% set rate = (counts.recovered * 100 / counts.total)|round(1) if counts.total else 0 %}
+    <div class="progress mb-2" style="height:14px" role="progressbar" aria-label="Recovery rate"
+         aria-valuenow="{{ rate }}" aria-valuemin="0" aria-valuemax="100">
+      <span style="width:{{ rate }}%;background:var(--teal-600)"></span>
+    </div>
+    <p class="small text-muted mb-0">{{ rate }}% of this institution's reports led to a verified recovery.</p>
+  </div>
+</div>
+{% endblock %}

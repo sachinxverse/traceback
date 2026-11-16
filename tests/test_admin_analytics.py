@@ -13,6 +13,7 @@ def make_admin(db, email="adm@test.com"):
         u.set_password("Password1")
         db.session.add(u)
     u.role = Role.ADMIN
+    u.email_verified = True
     db.session.commit()
     return u
 
@@ -26,6 +27,8 @@ def test_admin_requires_role(client, db):
 def test_admin_cannot_demote_self(client, db):
     auth(client, "selfadmin@x.com", "Self")
     admin = make_admin(db, "selfadmin@x.com")
+    client.post("/api/v1/auth/logout")
+    login(client, "selfadmin@x.com")  # fresh admin-portal token
     my_id = admin.id
     r = client.patch(f"/api/v1/admin/users/{my_id}", json={"role": "USER"})
     assert r.status_code == 409

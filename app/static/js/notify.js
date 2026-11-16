@@ -118,33 +118,10 @@ document.addEventListener('DOMContentLoaded', () => {
     window.location.href = '/';
   });
 
-  // login / register / profile forms
-  wireAuthForm('login-form', '/auth/login', data => {
-    const p = new URLSearchParams(location.search);
-    window.location.href = p.get('next') || '/dashboard';
-  });
-  wireAuthForm('register-form', '/auth/register', () => { window.location.href = '/dashboard'; });
+  // Login/register are handled per-page by portal-login.js / register-otp.js
+  // (two-step OTP flows, Part B/C). Profile forms live in auth.js.
 });
 
-function wireAuthForm(formId, endpoint, onSuccess) {
-  const form = document.getElementById(formId);
-  if (!form) return;
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    setBusy(form, true);
-    try {
-      const fd = new FormData(form);
-      const body = {};
-      fd.forEach((v, k) => { body[k] = v; });
-      await apiFetch(endpoint, { method: endpoint.endsWith('login') ? 'POST' : 'POST', body });
-      onSuccess(body);
-    } catch (err) {
-      showToast(err.message + detailText(err));
-    } finally {
-      setBusy(form, false);
-    }
-  });
-}
 
 function detailText(err) {
   if (!err.details) return '';

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}QR poster — TRACEBACK{% endblock %}
+{% block content %}
+<div class="tb-container page-top portal-strip" style="--strip:var(--teal-600)">
+  <div class="page-head">
+    <div>
+      <div class="section-label" style="color:var(--teal-700)">Staff Portal</div>
+      <h1 class="mb-0">Institution QR poster</h1>
+    </div>
+  </div>
+  <div class="card p-4">
+    <div class="row g-4 align-items-center">
+      <div class="col-md-4 text-center">
+        <img src="/api/v1/institutions/{{ institution.id }}/qr.png?size=400" alt="QR code for {{ institution.name }}"
+             class="img-fluid" style="max-width:280px;border:1px solid var(--border);border-radius:12px">
+      </div>
+      <div class="col-md-8">
+        <h5>{{ institution.name }}</h5>
+        <p>Print this poster and place it at your entrance. Visitors scan the QR to
+        open <strong>/i/{{ institution.slug }}</strong>, then report lost or found items with your
+        location pre-filled.</p>
+        <div class="d-flex gap-2 flex-wrap">
+          <a class="btn btn-primary" href="/api/v1/institutions/{{ institution.id }}/qr.png?size=800" download="{{ institution.slug }}-qr.png">Download QR</a>
+          <a class="btn btn-ghost" href="/i/{{ institution.slug }}">Preview landing page</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

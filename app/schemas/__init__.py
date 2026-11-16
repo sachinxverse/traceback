@@ -51,6 +51,9 @@ class LoginSchema(BaseSchema):
 class ChangePasswordSchema(BaseSchema):
     current_password = fields.Str(required=True, load_only=True)
     new_password = fields.Str(required=True, load_only=True)
+    # Part C1.5: sensitive-action OTP (optional in schema; enforced in the view)
+    otp_challenge_id = fields.Str(required=False, load_only=True)
+    otp = fields.Str(required=False, load_only=True)
 
     @validates("new_password")
     def password_policy(self, value, **kwargs):
@@ -63,6 +66,9 @@ class ChangePasswordSchema(BaseSchema):
 class UpdateProfileSchema(BaseSchema):
     name = fields.Str(required=False, validate=validate.Length(min=2, max=120))
     phone = fields.Str(required=False, allow_none=True, validate=validate.Length(max=30))
+    # Part C1.5: sensitive-action OTP (optional in schema; enforced in the view)
+    otp_challenge_id = fields.Str(required=False, load_only=True)
+    otp = fields.Str(required=False, load_only=True)
 
 
 class ReportCreateSchema(BaseSchema):
@@ -136,6 +142,23 @@ class AdminUserPatchSchema(BaseSchema):
     role = fields.Str(required=False, validate=validate.OneOf(["USER", "STAFF", "ADMIN"]))
     is_active = fields.Bool(required=False)
     institution_id = fields.Int(required=False, allow_none=True)
+
+
+class AdminUserCreateSchema(BaseSchema):
+    """Admin > Users > create staff/admin account (Part B1.6)."""
+    name = fields.Str(required=True, validate=validate.Length(min=2, max=120))
+    email = fields.Email(required=True, validate=validate.Length(max=255))
+    password = fields.Str(required=True, load_only=True)
+    role = fields.Str(required=True, validate=validate.OneOf(["STAFF", "ADMIN"]))
+    institution_id = fields.Int(required=False, allow_none=True)
+    phone = fields.Str(required=False, allow_none=True, validate=validate.Length(max=30))
+
+    @validates("password")
+    def password_policy(self, value, **kwargs):
+        if len(value) < 8:
+            raise ValidationError("Password must be at least 8 characters.")
+        if not re.search(r"[A-Za-z]", value) or not re.search(r"\d", value):
+            raise ValidationError("Password must contain at least one letter and one digit.")
 
 
 class ReviewNoteSchema(BaseSchema):

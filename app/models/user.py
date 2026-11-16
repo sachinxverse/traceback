@@ -21,6 +21,12 @@ class User(db.Model):
     created_at = Column(DateTime, nullable=False, default=utcnow)
     updated_at = Column(DateTime, nullable=False, default=utcnow, onupdate=utcnow)
     last_login_at = Column(DateTime, nullable=True)
+    # Part C4: OTP-related columns
+    email_verified = Column(Boolean, nullable=False, default=False)
+    failed_login_count = Column(Integer, nullable=False, default=0)
+    locked_until = Column(DateTime, nullable=True)
+    last_password_change_at = Column(DateTime, nullable=True)
+    token_version = Column(Integer, nullable=False, default=0)
 
     institution = db.relationship("Institution", back_populates="staff_members")
     reports = db.relationship("Report", back_populates="owner", foreign_keys="Report.user_id")

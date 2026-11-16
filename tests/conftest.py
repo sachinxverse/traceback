@@ -46,8 +46,10 @@ class CsrfClient(FlaskClient):
 def app(tmp_path):
     import app.services.storage as storage_mod
     from app.services.embeddings import reset_embedder
+    from app.services.otp import TestingOtpSender
     reset_embedder()
     storage_mod.reset_storage()
+    TestingOtpSender.reset()
     app = create_app("testing")
     app.test_client_class = CsrfClient
     app.config["UPLOAD_DIR"] = str(tmp_path / "uploads")
@@ -87,12 +89,50 @@ def image_file(colour=(200, 30, 30), name="photo.png"):
 
 
 def register(client, email, name="Test User", password="Password1"):
-    return client.post("/api/v1/auth/register", json={
+    """Register AND verify the OTP so the session is usable (Part C)."""
+    r = client.post("/api/v1/auth/register", json={
         "name": name, "email": email, "password": password})
+    return _complete_register(client, email, r)
 
 
-def login(client, email, password="Password1"):
-    return client.post("/api/v1/auth/login", json={"email": email, "password": password})
+def _complete_register(client, email, r):
+    from app.services.otp import TestingOtpSender
+    if r.status_code != 201:  # validation/conflict errors returned as-is
+        return r
+    challenge = r.get_json()["data"]["challenge_id"]
+    code = TestingOtpSender.latest(email, "REGISTER")
+    assert code, "testing OTP sender produced no code"
+    return client.post("/api/v1/auth/register/verify-otp",
+                       json={"challenge_id": challenge, "otp": code})
+
+
+def otp_code(email, purpose=None):
+    """Latest code the TestingOtpSender recorded for this email."""
+    from app.services.otp import TestingOtpSender
+    code = TestingOtpSender.latest(email, purpose)
+    assert code, "no OTP recorded for " + email
+    return code
+
+
+def login(client, email, password="Password1", portal=None):
+    """Two-step portal login (Part C): returns the verify-otp response.
+    portal defaults to the user's actual role, so existing tests keep working."""
+    if portal is None:
+        portal = "user"
+        with client.application.app_context():
+            from app.models import User as _U
+            u = _U.query.filter_by(email=email).first()
+            if u is not None:
+                portal = {"USER": "user", "STAFF": "staff", "ADMIN": "admin"}[u.role.value]
+    r = client.post(f"/api/v1/auth/{portal}/login", json={"email": email, "password": password})
+    if r.status_code != 200:
+        return r
+    challenge = r.get_json()["data"]["challenge_id"]
+    from app.services.otp import TestingOtpSender
+    code = TestingOtpSender.latest(email)
+    assert code, "testing OTP sender produced no code"
+    return client.post(f"/api/v1/auth/{portal}/verify-otp",
+                       json={"challenge_id": challenge, "otp": code})
 
 
 def auth(client, email, name="Test User", password="Password1"):
@@ -181,7 +221,7 @@ def make_institution(db, name="Test College", slug=None, lat=30.4, lng=78.0):
 
 def make_staff(db, email="staff@x.com", inst_id=None):
     u = User(name="Staff Person", email=email, role=Role.STAFF,
-             institution_id=inst_id)
+             institution_id=inst_id, email_verified=True)
     u.set_password("Password1")
     db.session.add(u)
     db.session.commit()

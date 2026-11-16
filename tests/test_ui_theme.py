@@ -44,12 +44,15 @@ def ui_server(tmp_path_factory):
     os.environ["DATABASE_URL"] = f"sqlite:///{db_path.as_posix()}"
     with app.app_context():
         _db.create_all()
-        a = User(name="Admin UI", email="ui-admin@test.com", role=Role.ADMIN)
+        a = User(name="Admin UI", email="ui-admin@test.com", role=Role.ADMIN,
+                 email_verified=True)
         a.set_password("Password1")
-        u = User(name="User UI", email="ui-user@test.com")
+        u = User(name="User UI", email="ui-user@test.com", email_verified=True)
         u.set_password("Password1")
         _db.session.add_all([a, u])
         _db.session.commit()
+        _db_by_email["ui-admin@test.com"] = "admin"
+        _db_by_email["ui-user@test.com"] = "user"
     from werkzeug.serving import make_server
     server = make_server("127.0.0.1", port, app)
     threading.Thread(target=server.serve_forever, daemon=True).start()
@@ -63,14 +66,27 @@ def ui_server(tmp_path_factory):
 
 PAGES_PUBLIC = ["/", "/institutions", "/login", "/register", "/how-it-works"]
 WIDTHS = [375, 768, 1280]
+_db_by_email = {}  # email -> portal, filled by the ui_server fixture
 
 
 def _login(page, base, email):
-    page.goto(f"{base}/login")
+    """Two-step login through the real UI (Part C), on the correct portal."""
+    from app.services.otp import TestingOtpSender
+    TestingOtpSender.reset()
+    portal = _db_by_email.get(email, "user")
+    login_path = {"user": "/login", "staff": "/staff/login", "admin": "/admin/login"}[portal]
+    page.goto(f"{base}{login_path}")
     page.fill("#email", email)
     page.fill("#password", "Password1")
     page.click("#login-form button[type=submit]")
-    page.wait_for_url("**/dashboard", timeout=10000)
+    page.wait_for_selector("#otp-step:not(.d-none)", timeout=10000)
+    code = TestingOtpSender.latest(email)
+    assert code, "no OTP recorded by TestingOtpSender"
+    boxes = page.locator("#otp-step .otp-digit")
+    for i, ch in enumerate(code):
+        boxes.nth(i).fill(ch)
+    page.click("#otp-verify")
+    page.wait_for_url("**/admin" if portal == "admin" else "**/dashboard", timeout=10000)
 
 
 def _no_overflow(page, url, width, base):

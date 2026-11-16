@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import status_pill, empty_state %}
+{% block title %}Claims to review — TRACEBACK{% endblock %}
+{% block content %}
+<div class="tb-container page-top portal-strip" style="--strip:var(--teal-600)">
+  <div class="page-head">
+    <div>
+      <div class="section-label" style="color:var(--teal-700)">Staff Portal</div>
+      <h1 class="mb-0">Claims to review</h1>
+    </div>
+  </div>
+  {% if claims %}
+  <div class="row g-3">
+    {% for c in claims %}
+    <div class="col-md-6">
+      <div class="card p-3 h-100">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <a href="/claims/{{ c.id }}" class="fw-semibold">Claim #{{ c.id }}</a>
+          {{ status_pill(c.verification_status.value) }}
+        </div>
+        <div class="small mb-2">Lost item: <strong>{{ c.match.lost_report.title }}</strong><br>
+        Found item: <strong>{{ c.match.found_report.title }}</strong></div>
+        <a class="btn btn-sm btn-primary" href="/claims/{{ c.id }}">Review claim</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  {{ empty_state('bi-clipboard-check', 'No claims to review',
+      'When an owner claims one of your institution\'s found items, it appears here for review.') }}
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,4 +1,4 @@
-// auth.js: shared helpers for profile page (change password / update profile).
+// auth.js: profile page (update profile / change password with OTP, Part C1.5).
 import { apiFetch, showToast } from './api.js';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -6,22 +6,49 @@ document.addEventListener('DOMContentLoaded', () => {
   if (profileForm) profileForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const body = {};
-    new FormData(profileForm).forEach((v, k) => body[k] = v);
+    new FormData(profileForm).forEach((v, k) => { body[k] = v; });
     try {
-      await apiFetch('/auth/me', { method: 'PATCH', body });
+      const needsOtp = body.phone !== undefined && body.phone !== '';
+      if (needsOtp) {
+        // C1.5: phone changes need a fresh SENSITIVE_ACTION OTP
+        try {
+          await apiFetch('/auth/me', { method: 'PATCH', body });
+        } catch (err) {
+          if (err.details && err.details.otp_required) {
+            const ch = await apiFetch('/auth/sensitive-otp', { method: 'POST' });
+            const code = window.prompt(`Enter the code sent to ${ch.masked_destination || 'your email'}:`);
+            if (!code) return;
+            await apiFetch('/auth/me', { method: 'PATCH',
+              body: { ...body, otp_challenge_id: ch.challenge_id, otp: code } });
+          } else { throw err; }
+        }
+      } else {
+        await apiFetch('/auth/me', { method: 'PATCH', body });
+      }
       showToast('Profile updated', 'success');
-    } catch (err) { showToast(err.message); }
+    } catch (err) {
+      showToast(err.message + (err.details ? ' — ' + Object.values(err.details).flat().join('; ') : ''));
+    }
   });
 
   const pwForm = document.getElementById('password-form');
   if (pwForm) pwForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const body = {};
-    new FormData(pwForm).forEach((v, k) => body[k] = v);
+    new FormData(pwForm).forEach((v, k) => { body[k] = v; });
     try {
-      await apiFetch('/auth/change-password', { method: 'POST', body });
+      // C1.5: request an OTP first, then submit with challenge + code
+      const ch = await apiFetch('/auth/sensitive-otp', { method: 'POST' });
+      const code = window.prompt(`Enter the code sent to ${ch.masked_destination || 'your email'}:`);
+      if (!code) return;
+      await apiFetch('/auth/change-password', {
+        method: 'POST',
+        body: { ...body, otp_challenge_id: ch.challenge_id, otp: code },
+      });
       showToast('Password changed', 'success');
       pwForm.reset();
-    } catch (err) { showToast(err.message); }
+    } catch (err) {
+      showToast(err.message + (err.details ? ' — ' + Object.values(err.details).flat().join('; ') : ''));
+    }
   });
 });

@@ -94,6 +94,29 @@ class BaseConfig:
 
     # URLs
     BASE_URL = os.environ.get("BASE_URL", "http://localhost:5000")
+    # Default map centre (string 'lat,lng' env override; used by /api/v1/meta)
+    MAP_DEFAULT_CENTER = [float(x) for x in os.environ.get(
+        "MAP_DEFAULT_CENTER", "30.0668,79.0193").split(",")]
+
+    # --- Auth portals (Part B) -------------------------------------------------
+    # Progressive lockout after repeated failed passwords (Part C2).
+    LOGIN_MAX_FAILURES = _int_env("LOGIN_MAX_FAILURES", 5)
+    LOGIN_LOCKOUT_WINDOW_SECONDS = _int_env("LOGIN_LOCKOUT_WINDOW_SECONDS", 15 * 60)
+    LOGIN_LOCKOUT_SECONDS = _int_env("LOGIN_LOCKOUT_SECONDS", 15 * 60)
+
+    # --- OTP (Part C) -----------------------------------------------------------
+    OTP_CODE_LENGTH = _int_env("OTP_CODE_LENGTH", 6)
+    OTP_EXPIRES_SECONDS = _int_env("OTP_EXPIRES_SECONDS", 300)      # 5 minutes
+    OTP_MAX_ATTEMPTS = _int_env("OTP_MAX_ATTEMPTS", 5)              # then challenge locks
+    OTP_RESEND_COOLDOWN_SECONDS = _int_env("OTP_RESEND_COOLDOWN_SECONDS", 30)
+    OTP_MAX_RESENDS = _int_env("OTP_MAX_RESENDS", 3)                # per challenge
+    OTP_HOURLY_LIMIT = _int_env("OTP_HOURLY_LIMIT", 5)              # per email per hour
+    # Delivery channel: 'email' (SMTP, default) or 'console' (prints to server
+    # console in development only). 'sms' adapter exists but needs a provider.
+    OTP_SENDER = os.environ.get("OTP_SENDER", "email")
+    # OTP_DEV_ECHO may echo the code to the UI — DEVELOPMENT ONLY. Production
+    # refuses to start when true (ProductionConfig.validate).
+    OTP_DEV_ECHO = os.environ.get("OTP_DEV_ECHO", "false").lower() in ("1", "true", "yes")
 
     # Mail
     MAIL_ENABLED = os.environ.get("MAIL_ENABLED", "false").lower() in ("1", "true", "yes")
@@ -135,6 +158,10 @@ class TestingConfig(BaseConfig):
     JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY") or "testing-jwt-key-0123456789abcdef01234567"
     # JWT cookies must still behave like production for tests (CSRF on).
     JWT_COOKIE_SECURE = False
+    # Tests capture OTPs via the built-in TestingOtpSender (records codes in
+    # memory); there is deliberately no skip-OTP switch in any config.
+    OTP_SENDER = "testing"
+    OTP_DEV_ECHO = False
 
 
 class ProductionConfig(BaseConfig):
@@ -170,6 +197,16 @@ class ProductionConfig(BaseConfig):
             raise RuntimeError(
                 "Refusing SQLite in production; set DATABASE_URL to PostgreSQL "
                 "(or set ALLOW_SQLITE_IN_PRODUCTION=1 for single-box demos)")
+        # Part C: OTP safety rails in production.
+        if os.environ.get("OTP_DEV_ECHO", "").lower() in ("1", "true", "yes"):
+            raise RuntimeError("OTP_DEV_ECHO=true is a development-only convenience; "
+                               "refusing to start in production")
+        sender = os.environ.get("OTP_SENDER", "email")
+        mail_on = os.environ.get("MAIL_ENABLED", "").lower() in ("1", "true", "yes")
+        if not mail_on and sender == "email":
+            raise RuntimeError(
+                "MAIL_ENABLED=false without a configured alternative OTP sender "
+                "(set MAIL_ENABLED=true with SMTP settings, or OTP_SENDER=sms)")
 
 
 CONFIG_MAP = {

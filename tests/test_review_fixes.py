@@ -19,6 +19,7 @@ def make_admin(db, email="admin@traceback.local"):
         u.set_password("Password1")
         db.session.add(u)
     u.role = Role.ADMIN
+    u.email_verified = True
     db.session.commit()
     return u
 
@@ -389,6 +390,7 @@ def test_b2_production_validate_rejects_placeholders_and_short_keys():
         "SECRET_KEY": "please-change-this-secret",
         "JWT_SECRET_KEY": "x" * 40,
         "DATABASE_URL": "postgresql+psycopg2://u:p@localhost/db",
+        "MAIL_ENABLED": "true",          # Part C: OTP delivery configured
     }
     old = {k: os.environ.get(k) for k in env}
     try:
@@ -403,6 +405,15 @@ def test_b2_production_validate_rejects_placeholders_and_short_keys():
 
         os.environ["JWT_SECRET_KEY"] = "b" * 40
         ProductionConfig.validate()  # strong keys -> passes
+
+        # Part C rails: OTP_DEV_ECHO and a missing mail sender must fail
+        os.environ["OTP_DEV_ECHO"] = "true"
+        with pytest.raises(RuntimeError, match="OTP_DEV_ECHO"):
+            ProductionConfig.validate()
+        os.environ["OTP_DEV_ECHO"] = "false"
+        os.environ["MAIL_ENABLED"] = "false"
+        with pytest.raises(RuntimeError, match="MAIL_ENABLED"):
+            ProductionConfig.validate()
 
         # strong keys but missing from env entirely -> still required
         os.environ.pop("SECRET_KEY")
@@ -656,12 +667,11 @@ def test_c4_rate_limits_active_login_register(client=None):
         "name": f"U{i}", "email": f"rl{i}@x.com", "password": "Password1"}
     ).status_code for i in range(7)]
     assert codes.count(429) >= 1, codes
-    # login: 10/min -> 11th attempt limited
-    codes = [c.post("/api/v1/auth/login", json={
+    # user login: 10/min -> 11th attempt limited (step 1 of the OTP flow)
+    codes = [c.post("/api/v1/auth/user/login", json={
         "email": "rl-nologin@x.com", "password": "WrongPass1"}).status_code
         for _ in range(12)]
     assert 429 in codes
-    app.extensions.pop("login_attempts", None)
 
 
 def test_c4_change_password_rate_limited():
@@ -681,12 +691,12 @@ def test_c4_progressive_lockout_after_failed_logins():
     c = app.test_client()
     c.post("/api/v1/auth/register", json={
         "name": "Lock User", "email": "lock@x.com", "password": "Password1"})
-    # 5 wrong passwords -> lockout, even with the CORRECT password
+    # 5 wrong passwords -> account lockout, even with the CORRECT password
     for _ in range(5):
-        r = c.post("/api/v1/auth/login", json={
+        r = c.post("/api/v1/auth/user/login", json={
             "email": "lock@x.com", "password": "WrongPass1"})
         assert r.status_code == 401
-    r = c.post("/api/v1/auth/login", json={
+    r = c.post("/api/v1/auth/user/login", json={
         "email": "lock@x.com", "password": "Password1"})
     assert r.status_code == 429, r.get_data(as_text=True)
     body = r.get_json()["error"]
@@ -695,7 +705,7 @@ def test_c4_progressive_lockout_after_failed_logins():
     # a different email is not affected
     c.post("/api/v1/auth/register", json={
         "name": "Ok User", "email": "ok@x.com", "password": "Password1"})
-    r = c.post("/api/v1/auth/login", json={"email": "ok@x.com", "password": "Password1"})
+    r = c.post("/api/v1/auth/user/login", json={"email": "ok@x.com", "password": "Password1"})
     assert r.status_code == 200
 
 

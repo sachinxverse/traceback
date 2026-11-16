@@ -1,7 +1,7 @@
-"""Reusable authorization helpers for the API (Section 6)."""
+"""Reusable authorization helpers for the API (Section 6 + Part B portals)."""
 from functools import wraps
 
-from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+from flask_jwt_extended import get_jwt, get_jwt_identity, verify_jwt_in_request
 
 from .. import ApiError
 from ..extensions import db
@@ -10,13 +10,40 @@ from ..models.enums import Role
 
 
 def current_user() -> User:
-    """Load the authenticated user from the JWT, raising 401 if missing/inactive."""
+    """Load the authenticated user from the JWT, raising 401 if missing/inactive
+    or when the session was revoked via token_version (password reset)."""
     verify_jwt_in_request()
     user_id = get_jwt_identity()
     user = db.session.get(User, int(user_id))
     if user is None or not user.is_active:
         raise ApiError("UNAUTHENTICATED", "User not found or inactive", status=401)
+    if (get_jwt().get("tv") or 0) != (user.token_version or 0):
+        # all tokens issued before a password reset are revoked
+        raise ApiError("UNAUTHENTICATED", "Session expired; please log in again", status=401)
     return user
+
+
+def session_portal() -> str | None:
+    """The portal claim of the current JWT ('user' | 'staff' | 'admin')."""
+    try:
+        verify_jwt_in_request()
+        return get_jwt().get("portal", "user")
+    except Exception:  # noqa: BLE001 - unauthenticated
+        return None
+
+
+def portal_required(*portals):
+    """Decorator enforcing the token's `portal` claim (Part B1.3). Raises 403
+    with a generic message when the session was created by another portal."""
+    def decorator(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            portal = session_portal()
+            if portal not in portals:
+                raise ApiError("FORBIDDEN", "Not allowed", status=403)
+            return fn(*args, **kwargs)
+        return wrapper
+    return decorator
 
 
 def roles_required(*roles):

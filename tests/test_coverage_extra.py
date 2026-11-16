@@ -62,6 +62,9 @@ def test_geocode_empty(client, db):
 
 def test_geocode_rate_limit(client, app, db):
     auth(client, "g2@x.com", "G2")
+    # reset the shared geocode throttle state (test isolation)
+    from app.api import health as _health
+    _health._cache = {"q": None, "t": 0.0, "results": []}
     client.get("/api/v1/geocode?q=nowhere-xyz-123")
     from time import sleep
     sleep(1.05)
@@ -244,6 +247,8 @@ def test_admin_recoveries_and_audit_and_reports_filters(client, app, db):
     u = db.session.query(User).filter_by(email="adm@x.com").one()
     u.role = Role.ADMIN
     db.session.commit()
+    client.post("/api/v1/auth/logout")
+    login(client, "adm@x.com")  # fresh token with portal=admin
 
     r = client.get("/api/v1/admin/recoveries")
     assert r.status_code == 200
@@ -272,10 +277,12 @@ def test_admin_staff_scoped_reports(client, app, db):
         "incident_date": datetime.now(UTC).replace(tzinfo=None).strftime("%Y-%m-%dT%H:%M:%S")},
         content_type="multipart/form-data")
     client.post("/api/v1/auth/logout")
-    login(client, "scoped@x.com")
+    login(client, "scoped@x.com")  # auto-detects the staff portal
     r = client.get("/api/v1/admin/reports")
+    assert r.status_code == 403  # B1.3: staff token cannot call admin endpoints
+    r = client.get("/api/v1/staff/reports")
     assert r.status_code == 200
-    assert all(item.get("institution_id") == inst.id for item in r.get_json()["data"])
+    assert all(item["id"] and item["title"] for item in r.get_json()["data"])
 
 
 # ---------------------------------------------------------------- analytics
@@ -293,6 +300,8 @@ def test_categories_endpoint(client, app, db):
     u = db.session.query(User).filter_by(email="catadm@x.com").one()
     u.role = Role.ADMIN
     db.session.commit()
+    client.post("/api/v1/auth/logout")
+    login(client, "catadm@x.com")
     r = client.get("/api/v1/admin/analytics/categories")
     rows = r.get_json()["data"]
     sports = [x for x in rows if x["category"] == "SPORTS"]

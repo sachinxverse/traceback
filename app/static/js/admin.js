@@ -6,8 +6,12 @@ document.addEventListener('DOMContentLoaded', () => {
   if (document.getElementById('reports-table')) loadReports();
   if (document.getElementById('claims-table')) loadClaims('all');
   document.querySelectorAll('.nav-tabs [data-status]').forEach(a =>
-    a.addEventListener('click', (e) => { e.preventDefault(); loadClaims(a.dataset.status); }));
-  if (document.getElementById('users-table')) loadUsers();
+    a.addEventListener('click', () => {
+      document.querySelectorAll('.nav-tabs [data-status]').forEach(x => x.classList.remove('active'));
+      a.classList.add('active');
+      loadClaims(a.dataset.status);
+    }));
+  if (document.getElementById('users-table')) { loadUsers(); wireCreateUser(); }
   if (document.getElementById('inst-table')) wireInstitutions();
   if (document.getElementById('recoveries-table')) loadRecoveries();
 });
@@ -54,7 +58,7 @@ async function loadAnalytics() {
       },
     });
 
-    const map = L.map('admin-heatmap').setView([30.0668, 79.0193], 5);
+    const map = L.map('admin-heatmap').setView(window.__tbMetaCenter || [30.0668, 79.0193], 5);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
     async function drawHeat() {
@@ -123,18 +127,71 @@ async function loadUsers() {
       <td>${u.id}</td><td>${escapeHtml(u.name)}</td><td>${escapeHtml(u.email)}</td>
       <td>${u.role}</td><td>${u.institution ? escapeHtml(u.institution.name) : '—'}</td>
       <td>${u.is_active ? '✔' : '—'}</td>
-      <td><button class="btn btn-sm btn-outline-primary edit-user" data-id="${u.id}" data-role="${u.role}" data-inst="${u.institution_id || ''}">Edit</button></td></tr>`).join('');
-    document.querySelectorAll('.edit-user').forEach(b => b.addEventListener('click', () => {
-      const role = prompt('Role (USER/STAFF/ADMIN):', b.dataset.role);
-      if (!role) return;
-      const inst = role === 'STAFF' ? prompt('Institution ID:', b.dataset.inst) : null;
-      const body = { role };
-      if (role === 'STAFF' && inst) body.institution_id = parseInt(inst, 10);
-      apiFetch(`/admin/users/${b.dataset.id}`, { method: 'PATCH', body })
-        .then(loadUsers).catch(e => showToast(e.message));
+      <td><button class="btn btn-sm btn-outline-primary edit-user" type="button" data-id="${u.id}" data-role="${u.role}" data-inst="${u.institution_id || ''}" data-active="${u.is_active ? '1' : '0'}">Edit</button></td></tr>`).join('');
+    document.querySelectorAll('.edit-user').forEach(b => b.addEventListener('click', async () => {
+      document.getElementById('eu-role').value = b.dataset.role;
+      document.getElementById('eu-inst').value = b.dataset.inst || '';
+      document.getElementById('eu-active').checked = b.dataset.active === '1';
+      document.getElementById('edit-user-modal').dataset.id = b.dataset.id;
+      await fillInstitutionSelect('eu-inst');
+      new bootstrap.Modal(document.getElementById('edit-user-modal')).show();
     }));
   } catch (e) { showToast(e.message); }
   document.getElementById('user-q').onchange = loadUsers;
+}
+
+async function fillInstitutionSelect(selectId) {
+  const sel = document.getElementById(selectId);
+  if (sel.options.length > 1) return;
+  try {
+    const insts = await apiFetch('/institutions');
+    for (const i of insts) {
+      const opt = document.createElement('option');
+      opt.value = i.id; opt.textContent = i.name;
+      sel.appendChild(opt);
+    }
+  } catch (e) { /* leave just the None option */ }
+}
+
+function wireCreateUser() {
+  const createBtn = document.getElementById('create-user-btn');
+  if (!createBtn) return;
+  document.getElementById('cu-role').addEventListener('change', () => {
+    const isStaff = document.getElementById('cu-role').value === 'STAFF';
+    document.getElementById('cu-inst-wrap').style.display = isStaff ? '' : 'none';
+  });
+  document.getElementById('cu-save').addEventListener('click', async () => {
+    const body = {
+      name: document.getElementById('cu-name').value.trim(),
+      email: document.getElementById('cu-email').value.trim(),
+      password: document.getElementById('cu-password').value,
+      role: document.getElementById('cu-role').value,
+    };
+    if (body.role === 'STAFF') body.institution_id = parseInt(document.getElementById('cu-inst').value, 10) || null;
+    try {
+      await apiFetch('/admin/users', { method: 'POST', body });
+      showToast('Account created', 'success');
+      bootstrap.Modal.getInstance(document.getElementById('create-user-modal')).hide();
+      loadUsers();
+    } catch (e) {
+      showToast(e.message + (e.details ? ' — ' + Object.values(e.details).flat().join('; ') : ''));
+    }
+  });
+  document.getElementById('eu-save').addEventListener('click', async () => {
+    const id = document.getElementById('edit-user-modal').dataset.id;
+    const body = {
+      role: document.getElementById('eu-role').value,
+      is_active: document.getElementById('eu-active').checked,
+    };
+    const inst = document.getElementById('eu-inst').value;
+    if (body.role === 'STAFF' && inst) body.institution_id = parseInt(inst, 10);
+    try {
+      await apiFetch(`/admin/users/${id}`, { method: 'PATCH', body });
+      showToast('User updated', 'success');
+      bootstrap.Modal.getInstance(document.getElementById('edit-user-modal')).hide();
+      loadUsers();
+    } catch (e) { showToast(e.message); }
+  });
 }
 
 function wireInstitutions() {
@@ -149,7 +206,7 @@ function wireInstitutions() {
     document.getElementById('inst-address').value = inst.address || '';
     document.getElementById('inst-lat').value = inst.latitude ?? '';
     document.getElementById('inst-lng').value = inst.longitude ?? '';
-    document.getElementById('inst-verified').checked = false;
+    document.getElementById('inst-verified').checked = !!inst.verified;
     new bootstrap.Modal(document.getElementById('inst-modal')).show();
   }));
   document.getElementById('inst-save').addEventListener('click', async () => {
@@ -160,6 +217,7 @@ function wireInstitutions() {
       address: document.getElementById('inst-address').value,
       latitude: parseFloat(document.getElementById('inst-lat').value) || null,
       longitude: parseFloat(document.getElementById('inst-lng').value) || null,
+      verified: document.getElementById('inst-verified').checked,
     };
     try {
       if (id) await apiFetch(`/institutions/${id}`, { method: 'PATCH', body });

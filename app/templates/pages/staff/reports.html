@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% from "macros/ui.html" import status_pill, type_badge, empty_state %}
+{% block title %}Institution reports — TRACEBACK{% endblock %}
+{% block content %}
+<div class="tb-container page-top portal-strip" style="--strip:var(--teal-600)">
+  <div class="page-head">
+    <div>
+      <div class="section-label" style="color:var(--teal-700)">Staff Portal</div>
+      <h1 class="mb-0">Institution reports</h1>
+    </div>
+  </div>
+  <form class="row g-2 mb-4" method="get">
+    <div class="col-md-8"><input class="form-control" name="q" value="{{ q }}" placeholder="Search this institution's reports…" aria-label="Search reports"></div>
+    <div class="col-md-4"><button class="btn btn-primary w-100" type="submit">Search</button></div>
+  </form>
+  {% if rows %}
+  <div class="table-scroll card p-3"><table class="table align-middle mb-0">
+    <thead><tr><th>Report</th><th>Type</th><th>Status</th><th>Matches</th><th>Date</th></tr></thead>
+    <tbody>
+      {% for d in rows %}{% set r = d.report %}
+      <tr>
+        <td><a href="/reports/{{ r.id }}">{{ r.title }}</a></td>
+        <td>{{ type_badge(r.report_type.value) }}</td>
+        <td>{{ status_pill(r.status.value) }}</td>
+        <td>{{ d.match_count }}</td>
+        <td class="small">{{ r.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}
+  {{ empty_state('bi-inbox', 'No reports found', 'Nothing matches this search yet.') }}
+  {% endif %}
+</div>
+{% endblock %}

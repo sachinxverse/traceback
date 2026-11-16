@@ -65,6 +65,9 @@ def test_error_pages(client):
 
 
 def test_admin_page_blocks_normal_user(client, db):
+    # Part B: a USER-portal session is redirected to the admin portal login
     auth(client, "norm@x.com", "N")
-    assert client.get("/admin").status_code == 404
-    assert client.get("/admin/users").status_code == 404
+    r = client.get("/admin")
+    assert r.status_code == 302 and "/admin/login" in r.headers["Location"]
+    r = client.get("/admin/users")
+    assert r.status_code == 302 and "/admin/login" in r.headers["Location"]
