@@ -1,0 +1,55 @@
+# Render.com blueprint for TRACEBACK (https://render.com/docs/blueprint-spec)
+# After pushing this repo to GitHub: Render dashboard -> New -> Blueprint ->
+# pick this repo -> Apply. It creates the web service + Postgres database and
+# wires DATABASE_URL automatically.
+services:
+  - type: web
+    name: traceback-web
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    # init-db applies Alembic migrations (fails loudly if the DB is unreachable)
+    startCommand: flask init-db && gunicorn -w 2 -k gthread --threads 4 --timeout 120 -b 0.0.0.0:$PORT wsgi:app
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: APP_CONFIG
+        value: production
+      - key: PYTHON_VERSION
+        value: "3.13.5"
+      # Render injects DATABASE_URL for the database below; we need the SQLAlchemy form
+      - key: DATABASE_URL
+        fromDatabase:
+          name: traceback-db
+          property: connectionString
+      # generate once, e.g.: python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: BASE_URL
+        sync: false          # set to your onrender.com URL after first deploy
+      - key: COOKIE_SECURE
+        value: "true"        # render.com serves HTTPS
+      - key: EMBEDDING_BACKEND
+        value: stub          # switch to real later (needs a paid plan: torch is heavy)
+      - key: OTP_SENDER
+        sync: false          # "email" in production (SMTP vars below) or "console" while testing
+      - key: MAIL_ENABLED
+        sync: false          # "true" + MAIL_SERVER/MAIL_PORT/MAIL_USERNAME/MAIL_PASSWORD/MAIL_DEFAULT_SENDER
+      - key: MAIL_SERVER
+        sync: false
+      - key: MAIL_PORT
+        sync: false
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_DEFAULT_SENDER
+        sync: false
+      - key: OTP_DEV_ECHO
+        value: "false"       # production refuses to start with it true
+
+databases:
+  - name: traceback-db
+    plan: free
+    postgresMajorVersion: "15"
