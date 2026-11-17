@@ -14,3 +14,11 @@ htmlcov/
 .ruff_cache/
 *.log
 instance/
+.env.*
+!*.env.example
+*.pem
+*.key
+*.dump
+uploads/
+eval/objects/
+eval/synthetic/
