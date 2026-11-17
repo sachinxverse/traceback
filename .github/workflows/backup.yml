@@ -1,0 +1,30 @@
+# Daily + manual database backup (Issue 4). Requires the repo secret
+# DATABASE_URL. Keeps the dump as a workflow artifact for 14 days.
+name: backup
+
+on:
+  schedule:
+    - cron: "0 4 * * *"   # daily 04:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install postgres client
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+      - name: Dump database
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          test -n "$DATABASE_URL"
+          pg_dump --format=custom --no-owner --no-privileges \
+            -f traceback_db.dump "$DATABASE_URL"
+          echo "size: $(du -h traceback_db.dump | cut -f1)"
+      - name: Upload artifact (14-day retention)
+        uses: actions/upload-artifact@v4
+        with:
+          name: traceback-db-backup
+          path: traceback_db.dump
+          retention-days: 14
