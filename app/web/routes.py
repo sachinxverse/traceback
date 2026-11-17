@@ -1,7 +1,7 @@
 """HTML page routes (Section 11.3)."""
 from datetime import UTC, datetime
 
-from flask import Blueprint, abort, redirect, render_template, request
+from flask import Blueprint, abort, current_app, redirect, render_template, request
 from flask_jwt_extended import get_jwt, get_jwt_identity, verify_jwt_in_request
 
 from ..extensions import db
@@ -75,6 +75,28 @@ def index():
 @web_bp.get("/how-it-works")
 def how_it_works():
     return render_template("pages/how-it-works.html")
+
+
+@web_bp.get("/privacy")
+def privacy():
+    return render_template("pages/privacy.html")
+
+
+@web_bp.get("/terms")
+def terms():
+    return render_template("pages/terms.html")
+
+
+@web_bp.get("/.well-known/security.txt")
+def security_txt():
+    """RFC 9116 security.txt (Issue 6): how to report vulnerabilities."""
+    from flask import current_app
+    contact = current_app.config.get("SECURITY_CONTACT") or "mailto:security@traceback.invalid"
+    body = ("Contact: " + contact + "\n"
+            "Expires: 2027-11-17T00:00:00.000Z\n"
+            "Preferred-Languages: en\n"
+            "Policy: https://github.com/sachinxverse/traceback/blob/main/SECURITY.md\n")
+    return current_app.response_class(body, mimetype="text/plain")
 
 
 @web_bp.get("/institutions")
@@ -165,6 +187,12 @@ def dashboard():
 def report_form():
     _require_login()
     rtype = "lost" if request.path.endswith("/lost") else "found"
+    # Issue 7 Mode A: hide the FOUND form from regular users.
+    if (rtype == "found" and request.method == "GET"
+            and not current_app.config.get("ALLOW_PUBLIC_FOUND_REPORTS", True)
+            and getattr(_current_user(), "role", None) is not None
+            and _current_user().role.value == "USER"):
+        return redirect("/report/lost?notice=found-staff-only")
     institutions = Institution.query.filter_by(is_active=True).all()
     prefill_slug = request.args.get("institution")
     prefill = None
@@ -213,9 +241,15 @@ def match_detail(match_id):
             live_claim = c
             break
     is_lost_side = match.lost_report.user_id == user.id
+    from ..services.embeddings import backend_model_name
+    try:
+        model_label = backend_model_name(current_app.config["EMBEDDING_BACKEND"])
+    except KeyError:
+        model_label = current_app.config["EMBEDDING_BACKEND"]
     return render_template("pages/match_detail.html", match=match,
                            for_lost=is_lost_side, distance=distance,
-                           live_claim=live_claim)
+                           live_claim=live_claim,
+                           embedding_model_label=model_label)
 
 
 @web_bp.get("/claims")
