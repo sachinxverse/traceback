@@ -25,7 +25,7 @@
           <div class="col-6 col-md-3">{{ breakdown_row(sig, match.scores_dict()[sig]) }}</div>
           {% endfor %}
         </div>
-        <div class="text-muted small mt-2">Signals used: {{ (match.signals_used or []) | join(', ') | default('—') }}</div>
+        <div class="text-muted small mt-2" title="Image and text similarity computed with the {{ embedding_model_label }} backend; scores are model-dependent.">Signals used: {{ (match.signals_used or []) | join(', ') | default('—') }}</div>
       </div>
     </div>
   </div>
