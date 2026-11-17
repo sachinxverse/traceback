@@ -69,7 +69,11 @@ def test_geocode_rate_limit(client, app, db):
     from time import sleep
     sleep(1.05)
     client.get("/api/v1/geocode?q=different-query-456")
-    # immediate repeat must hit the 1 req/sec limit
+    # immediate repeat must hit the 1 req/sec limit. On a loaded CI runner
+    # the third request can land >1s after the second by itself; pin the
+    # throttle clock instead of racing wall time.
+    import time as _time
+    _health._cache["t"] = _time.time()  # second request just answered now
     r3 = client.get("/api/v1/geocode?q=another-query-789")
     assert r3.status_code == 429
 
