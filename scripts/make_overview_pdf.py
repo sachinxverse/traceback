@@ -252,7 +252,7 @@ pdf.bullet("Candidate generation: lost vs found pairs filtered by status, catego
 pdf.bullet("Scoring: image (embedding cosine), text (embedding cosine), location (exponential decay by km), time (exponential decay by days), combined with configurable MATCH_WEIGHTS (default 0.40 / 0.25 / 0.20 / 0.15).")
 pdf.bullet("Band thresholds (IMG_LOW/HIGH, TXT_LOW/HIGH) convert raw cosine values into intuitive 0-100 sub-scores shown to users with a visible breakdown.")
 pdf.bullet("Top-N matches (default 10) above MATCH_MIN_SCORE (0.45) are persisted; those above NOTIFY_MIN_SCORE (0.55) notify both owners.")
-pdf.bullet("Measured quality (scripts/evaluate_matching.py): precision@1 = 1.0, recall@3 = 1.0, FPR = 0.000 with the stub backend; the real backend reaches P@1 = 1.0 with FPR = 0.188, an accepted, documented trade-off - matches only notify, the claims workflow is the human confirmation.")
+pdf.bullet("Evaluation (Issue 2): the evaluation harness reports sample sizes, Precision@1/3, Recall@3, MRR, FPR and 95% bootstrap CIs over a tune/test split. Accuracy claims require the labelled eval set - demo-data metrics have been retracted (see docs/EVAL_RESULTS.md); matches only notify, the claims workflow is the human confirmation.")
 
 pdf.h2("4.3 Claim state machine (app/services/claims.py)")
 pdf.bullet("States: PENDING, APPROVED, REJECTED, DISPUTED, HANDED_OVER, COMPLETED.")
