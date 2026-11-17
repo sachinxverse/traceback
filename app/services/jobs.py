@@ -51,7 +51,7 @@ def process_report(report_id: int) -> None:
     from ..extensions import db
     from ..models import Report
     from ..models.enums import ProcessingStatus
-    from .embeddings import get_embedder, to_blob
+    from .embeddings import backend_model_name, get_embedder, to_blob
     from .matching import find_and_store_matches
 
     report = db.session.get(Report, report_id)
@@ -62,19 +62,24 @@ def process_report(report_id: int) -> None:
     app = current_app._get_current_object()
     try:
         embedder = get_embedder(app)
+        model_name = backend_model_name(app.config["EMBEDDING_BACKEND"])
         from .storage import get_storage
         storage = get_storage(app)
 
         for img in report.images:
-            if img.embedding is None:
+            if img.embedding is None or img.embedding_model != model_name:
                 try:
                     data = storage.open(img.storage_key)
                     img.embedding = to_blob(embedder.embed_image(data))
+                    img.embedding_model = model_name
+                    img.embedding_dim = len(img.embedding) // 4
                 except Exception:
                     log.exception("Failed to embed image %s of report %s", img.id, report.id)
 
         report.text_embedding = to_blob(
             embedder.embed_text(f"{report.category.value.lower()}. {report.title}. {report.description}"))
+        report.embedding_model = model_name
+        report.embedding_dim = len(report.text_embedding) // 4
 
         report.processing_status = ProcessingStatus.READY
         db.session.commit()
@@ -93,11 +98,12 @@ def reindex_all(app) -> None:
     from ..extensions import db
     from ..models import Report
     from ..models.enums import ProcessingStatus
-    from .embeddings import get_embedder, to_blob
+    from .embeddings import backend_model_name, get_embedder, to_blob
     from .matching import find_and_store_matches
 
     with app.app_context():
         embedder = get_embedder(app)
+        model_name = backend_model_name(app.config["EMBEDDING_BACKEND"])
         from .storage import get_storage
         storage = get_storage(app)
         for report in Report.query.all():
@@ -105,11 +111,15 @@ def reindex_all(app) -> None:
                 try:
                     data = storage.open(img.storage_key)
                     img.embedding = to_blob(embedder.embed_image(data))
+                    img.embedding_model = model_name
+                    img.embedding_dim = len(img.embedding) // 4
                 except Exception:
                     log.exception("Reindex: failed to embed image %s", img.id)
             report.text_embedding = to_blob(
                 embedder.embed_text(
                     f"{report.category.value.lower()}. {report.title}. {report.description}"))
+            report.embedding_model = model_name
+            report.embedding_dim = len(report.text_embedding) // 4
             report.processing_status = ProcessingStatus.READY
         db.session.commit()
         for report in Report.query.all():
