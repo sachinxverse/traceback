@@ -1,0 +1,4 @@
+pair_id,category,split,lost_image,lost_title,lost_desc,lost_place,lost_lat,lost_lng,lost_time,found_image,found_title,found_desc,found_place,found_lat,found_lng,found_time,is_same_item
+fx_pos_01,OTHER,test,o1_a.png,Lost blue bag,a blue bag left near the canteen,canteen,30.30,78.02,2026-10-01T09:00:00,o1_b.png,Found blue bag,one blue bag found at the canteen,canteen,30.30,78.02,2026-10-01T15:00:00,1
+fx_neg_01,OTHER,test,o1_a.png,Lost blue bag,a blue bag left near the canteen,canteen,30.30,78.02,2026-10-01T09:00:00,o2_b.png,Found red ball,one red ball found at the canteen,canteen,30.30,78.02,2026-10-01T16:00:00,0
+fx_neg_02,OTHER,test,o2_a.png,Lost red ball,a red ball lost at the canteen,canteen,30.30,78.02,2026-10-02T09:00:00,o1_b.png,Found blue bag,one blue bag found at the canteen,canteen,30.30,78.02,2026-10-02T15:00:00,0
