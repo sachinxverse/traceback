@@ -63,6 +63,14 @@ class BaseConfig:
     JOBS_SYNC = os.environ.get("JOBS_SYNC", "false").lower() in ("1", "true", "yes")
     JOBS_MAX_WORKERS = _int_env("JOBS_MAX_WORKERS", 2)
 
+    # Issue 7: who may file FOUND reports.
+    #   Mode A (false): only STAFF file FOUND (items held at institutions).
+    #   Mode B (true, default = the original specification): any verified
+    #   USER may also file FOUND and choose custody WITH_FINDER or
+    #   AT_INSTITUTION. STAFF filing stays allowed in both modes.
+    ALLOW_PUBLIC_FOUND_REPORTS = os.environ.get(
+        "ALLOW_PUBLIC_FOUND_REPORTS", "true").lower() in ("1", "true", "yes")
+
     # Embeddings / matching
     EMBEDDING_BACKEND = os.environ.get("EMBEDDING_BACKEND", "stub")
     CLIP_MODEL = os.environ.get("CLIP_MODEL", "ViT-B-32")
@@ -84,6 +92,14 @@ class BaseConfig:
     # Images
     UPLOAD_DIR = os.environ.get("UPLOAD_DIR") or os.path.join(BASE_DIR, "instance", "uploads")
     STORAGE_BACKEND = os.environ.get("STORAGE_BACKEND", "local")
+    S3_ENDPOINT_URL = os.environ.get("S3_ENDPOINT_URL") or None
+    S3_BUCKET = os.environ.get("S3_BUCKET") or ""
+    S3_REGION = os.environ.get("S3_REGION") or None
+    S3_PREFIX = os.environ.get("S3_PREFIX") or "traceback"
+    S3_ACCESS_KEY_ID = os.environ.get("S3_ACCESS_KEY_ID") or None
+    S3_SECRET_ACCESS_KEY = os.environ.get("S3_SECRET_ACCESS_KEY") or None
+    # Issue 5 guard: production must not silently use the ephemeral local disk
+    ALLOW_EPHEMERAL_STORAGE = os.environ.get("ALLOW_EPHEMERAL_STORAGE", "").lower() in ("1", "true", "yes")
     MAX_IMAGE_MB = _int_env("MAX_IMAGE_MB", 5)
     MAX_IMAGES_PER_REPORT = _int_env("MAX_IMAGES_PER_REPORT", 4)
     MAX_IMAGES_PER_CLAIM = _int_env("MAX_IMAGES_PER_CLAIM", 2)
@@ -207,6 +223,16 @@ class ProductionConfig(BaseConfig):
             raise RuntimeError(
                 "MAIL_ENABLED=false without a configured alternative OTP sender "
                 "(set MAIL_ENABLED=true with SMTP settings, or OTP_SENDER=sms)")
+        # Issue 5: uploads must survive restarts/deployments — the free-tier
+        # local disk is ephemeral. Require object storage unless explicitly
+        # overridden for a single-box demo.
+        if (os.environ.get("STORAGE_BACKEND", "local") != "s3"
+                and not os.environ.get("ALLOW_EPHEMERAL_STORAGE", "").lower() in ("1", "true", "yes")):
+            raise RuntimeError(
+                "Refusing STORAGE_BACKEND=local in production: uploaded photos "
+                "would be erased on every restart/deploy. Set "
+                "STORAGE_BACKEND=s3 with S3_* credentials, or set "
+                "ALLOW_EPHEMERAL_STORAGE=true to accept data loss explicitly.")
 
 
 CONFIG_MAP = {
