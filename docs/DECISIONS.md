@@ -177,8 +177,47 @@ as required by Section 1.2 and acceptance criterion A16.
     an SMTP sender for real email delivery). Production config validation
     (32+ char secrets, mail checks) is active and proved itself: two deploys
     failed fast until real secrets were set.
+
+## Decisions from the production-readiness review (2026-11-17)
+
+50. **Embedding backend = onnx (Issue 1).** Real AI in production without
+    PyTorch: fastembed (ONNX Runtime) with all-MiniLM-L6-v2 (text, 384d)
+    and quantised nomic-embed-vision-v1.5-Q (image, 768d). Measured
+    (docs/EMBEDDING_BENCHMARK.md): models ≈ 250 MB RSS; fits 512 MB free
+    tier with ONE Gunicorn worker (-w 1 --threads 8); fp32 CLIP (507 MB)
+    and PyTorch (566–698 MB) rejected as too large. Vectors carry
+    embedding_model + embedding_dim (migration c4e5f6a7b890); matching
+    compares only same-model vectors. flask reindex --backend X re-embeds
+    everything. Accuracy numbers await the labelled eval set.
+51. **Honest evaluation (Issue 2).** Old demo-data metrics ("P@1=1.0")
+    retracted — the demo data was self-generated. New harness
+    (scripts/evaluate_matching.py) reports sample sizes, P@1/P@3/R@3/MRR,
+    FPR, ablation and 95% bootstrap CIs, over a tune/test split. Checked-in
+    synthetic smoke set (25 pos / 75 neg) is labelled SYNTHETIC and shows
+    the harness works but does NOT validate accuracy (FPR 0.53 on test
+    split hard negatives). Real-photo collection (≥100 pairs, ≥300
+    negatives) tracked in eval/README.md before any public accuracy claim.
 49. **Admin bootstrap without SSH.** Free tier has no shell access, so the
     first admin was inserted directly into Postgres (via the external DB
     URL) using the app's own `werkzeug` password hashing, mirroring
     `flask create-admin`. Subsequent admins can be created the same way or
     by upgrading the plan for SSH.
+52. **Found-report scope (Issue 7).** Configured via
+    `ALLOW_PUBLIC_FOUND_REPORTS` (default **true** in render.yaml). Mode A
+    (false) = institution-only collection; Mode B (true) = the original
+    specification: any verified user may file a FOUND report and choose
+    custody. The reviewer table is already custody-based
+    (app/models/claim.py::can_review): AT_INSTITUTION → that
+    institution's STAFF (or ADMIN) reviews and marks handed over, the
+    claimant confirms received; WITH_FINDER → the finder reviews and
+    hands over, the claimant confirms. UI hints on the report form state
+    the reviewer per custody choice. Parameterised tests cover both
+    modes. Owner may flip the env var to switch modes.
+53. **Storage = S3-compatible object storage (Issue 5).** Production
+    refuses `STORAGE_BACKEND=local` (ephemeral disk loses photos on every
+    restart) unless `ALLOW_EPHEMERAL_STORAGE=true` is set explicitly.
+    S3Storage (boto3) works with AWS S3, Cloudflare R2 and Backblaze B2;
+    private bucket, files only served through the authorised
+    /api/v1/images/{id} endpoints; health includes a storage probe;
+    missing objects render a placeholder (never 500); `flask
+    check-images` lists rows whose object is missing.
