@@ -391,6 +391,7 @@ def test_b2_production_validate_rejects_placeholders_and_short_keys():
         "JWT_SECRET_KEY": "x" * 40,
         "DATABASE_URL": "postgresql+psycopg2://u:p@localhost/db",
         "MAIL_ENABLED": "true",          # Part C: OTP delivery configured
+        "STORAGE_BACKEND": "s3", "S3_BUCKET": "b",   # Issue 5 storage guard
     }
     old = {k: os.environ.get(k) for k in env}
     try:
@@ -642,7 +643,7 @@ def test_c2_evaluation_reports_both_labels(tmp_path, monkeypatch):
                         str(labels)], env=env, capture_output=True, text=True,
                        timeout=180, cwd=os.path.abspath(os.path.dirname(__file__) + "/.."))
     assert r.returncode == 0, r.stderr
-    assert "negative: 0" in r.stdout  # missing reports are skipped
+    assert "negatives 0" in r.stdout  # missing reports are skipped
 
 
 # ----------------------------------------------------------------- C4
