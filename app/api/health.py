@@ -15,9 +15,26 @@ def health():
     except Exception:  # noqa: BLE001 - health probe must degrade, not raise
         db_ok = False
     backend = current_app.config.get("EMBEDDING_BACKEND", "stub")
-    status = "ok" if db_ok else "degraded"
+    from ..services.embeddings import backend_model_name
+    try:
+        model = backend_model_name(backend)
+    except KeyError:  # unrecognised config value — report it verbatim
+        model = backend
+    # Issue 5: storage is part of health — write+delete a tiny object so a
+    # broken bucket/ephemeral disk is visible to monitors.
+    storage_ok = True
+    try:
+        from ..services.storage import get_storage
+        st = get_storage()
+        probe_key = "__health__/probe.txt"
+        st.save(b"ok", probe_key)
+        st.delete(probe_key)
+    except Exception:  # noqa: BLE001 - degrade, never raise from health
+        storage_ok = False
+    status = "ok" if (db_ok and storage_ok) else "degraded"
     return jsonify({"status": status, "db": "ok" if db_ok else "error",
-                    "embedding_backend": backend})
+                    "storage": "ok" if storage_ok else "error",
+                    "embedding_backend": backend, "model": model})
 
 
 @health_bp.get("/geocode")
