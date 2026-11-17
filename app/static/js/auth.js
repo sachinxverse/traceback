@@ -51,4 +51,20 @@ document.addEventListener('DOMContentLoaded', () => {
       showToast(err.message + (err.details ? ' — ' + Object.values(err.details).flat().join('; ') : ''));
     }
   });
+
+  // Issue 6: self-service account deletion (sensitive-action OTP protected).
+  const delBtn = document.getElementById('delete-account-btn');
+  if (delBtn) delBtn.addEventListener('click', async () => {
+    if (!window.confirm('Delete your account? This anonymises your personal data and signs you out everywhere. This cannot be undone.')) return;
+    try {
+      const ch = await apiFetch('/auth/sensitive-otp', { method: 'POST' });
+      const code = window.prompt(`Enter the code sent to ${ch.masked_destination || 'your email'} to confirm deletion:`);
+      if (!code) return;
+      await apiFetch('/auth/me', { method: 'DELETE', body: { otp_challenge_id: ch.challenge_id, otp: code } });
+      showToast('Account deleted. Your personal data has been anonymised.', 'success');
+      setTimeout(() => { window.location.href = '/'; }, 1500);
+    } catch (err) {
+      showToast(err.message + (err.details ? ' — ' + Object.values(err.details).flat().join('; ') : ''));
+    }
+  });
 });
