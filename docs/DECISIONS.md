@@ -159,3 +159,26 @@ as required by Section 1.2 and acceptance criterion A16.
     (`test_no_bypass.py::test_no_hardcoded_localhost_or_dummy_links`) fails the
     build on `localhost`, `javascript:` URLs, dead `href="#"` anchors, and demo
     credentials in templates/JS.
+
+## Decisions from the Render production deployment (2026-11-17)
+
+47. **Portable migration backfill.** The portals/OTP migration backfilled
+    `UPDATE users SET email_verified = 1`, which SQLite accepts but PostgreSQL
+    rejects (`DatatypeMismatch`: boolean vs integer). Fixed to
+    `SET email_verified = TRUE`, valid on both. Local SQLite tests masked the
+    bug — production staging caught it.
+48. **Render free-tier hosting.** Web service runs Python 3 (not Docker:
+    free plan cannot build torch) with build `pip install -r requirements.txt`
+    and start `flask init-db && gunicorn -w 2 -k gthread --threads 4
+    --timeout 120 -b 0.0.0.0:$PORT wsgi:app`. Env: `APP_CONFIG=production`,
+    managed Postgres via `DATABASE_URL`, `COOKIE_SECURE=true`,
+    `EMBEDDING_BACKEND=stub` (real torch needs a paid plan; stub preserves
+    P@1=1.0), `OTP_SENDER=console` (codes appear in server logs — upgrade to
+    an SMTP sender for real email delivery). Production config validation
+    (32+ char secrets, mail checks) is active and proved itself: two deploys
+    failed fast until real secrets were set.
+49. **Admin bootstrap without SSH.** Free tier has no shell access, so the
+    first admin was inserted directly into Postgres (via the external DB
+    URL) using the app's own `werkzeug` password hashing, mirroring
+    `flask create-admin`. Subsequent admins can be created the same way or
+    by upgrading the plan for SSH.
