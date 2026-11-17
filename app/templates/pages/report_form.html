@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Report a {{ report_type }} item — TRACEBACK{% endblock %}
 {% block content %}
+{% if request.args.get('notice') == 'found-staff-only' %}
+<div class="tb-container mt-3"><div class="alert alert-warning" role="alert">Found reports are accepted by
+  institution staff only — please hand the item in at an institution desk.</div></div>
+{% endif %}
 {% set accent = 'var(--amber-700)' if report_type == 'lost' else 'var(--blue-600)' %}
 <div class="tb-container page-top" style="max-width:860px">
   <div class="page-head">
@@ -73,10 +77,12 @@
           <div class="form-check m-0">
             <input class="form-check-input" type="radio" name="custody" id="custody1" value="WITH_FINDER">
             <label class="form-check-label" for="custody1">I'm keeping it with me</label>
+            <div class="form-hint" id="custody1-hint">The finder (you) will verify the claim and hand the item over.</div>
           </div>
           <div class="form-check m-0">
             <input class="form-check-input" type="radio" name="custody" id="custody2" value="AT_INSTITUTION">
             <label class="form-check-label" for="custody2">It's held at an institution</label>
+            <div class="form-hint" id="custody2-hint">The institution's staff will verify the claim and hand the item over at their desk.</div>
           </div>
         </div>
         <div class="field-error" id="custody-error">Please tell us where the item is.</div>
