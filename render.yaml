@@ -16,6 +16,10 @@ services:
         value: production
       - key: PYTHON_VERSION
         value: "3.13.5"
+      # Issue 7: Mode B (the original specification) — any verified user may
+      # file FOUND reports; set false for institution-only collection.
+      - key: ALLOW_PUBLIC_FOUND_REPORTS
+        value: "true"
       # Render injects DATABASE_URL for the database below; we need the SQLAlchemy form
       - key: DATABASE_URL
         fromDatabase:
