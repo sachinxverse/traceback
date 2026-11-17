@@ -165,14 +165,22 @@ def find_and_store_matches(report: Report, notify: bool = True) -> None:
     top_n = app.config["MATCH_TOP_N"]
     notify_min = app.config["NOTIFY_MIN_SCORE"]
 
-    text_emb_r = from_blob(report.text_embedding, TEXT_DIM)
-    img_embs_r = [from_blob(i.embedding, IMAGE_DIM) for i in report.images]
+    text_emb_r = from_blob(report.text_embedding, report.embedding_dim or TEXT_DIM)
+    img_embs_r = [from_blob(i.embedding, i.embedding_dim or IMAGE_DIM) for i in report.images]
     img_embs_r = [v for v in img_embs_r if v is not None]
+    # Issue 1: only vectors produced by the same embedding model may be
+    # compared. The reference report's model id decides which candidate
+    # vectors are eligible; anything else is ignored (never mixed).
+    ref_model = report.embedding_model
 
     results = []
     for candidate in get_candidates(report):
-        text_emb_c = from_blob(candidate.text_embedding, TEXT_DIM)
-        img_embs_c = [from_blob(i.embedding, IMAGE_DIM) for i in candidate.images]
+        if candidate.embedding_model != ref_model:
+            continue  # different embedding space — never compare
+        text_emb_c = from_blob(candidate.text_embedding,
+                               candidate.embedding_dim or TEXT_DIM)
+        img_embs_c = [from_blob(i.embedding, i.embedding_dim or IMAGE_DIM)
+                      for i in candidate.images if i.embedding_model == ref_model]
         img_embs_c = [v for v in img_embs_c if v is not None]
 
         scores = component_scores(report, candidate, text_emb_r, text_emb_c,
