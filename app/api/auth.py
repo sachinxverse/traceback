@@ -339,6 +339,36 @@ def me():
     return jsonify({"data": _user_payload(user)})
 
 
+@auth_bp.delete("/me")
+def delete_me():
+    """Self-service account deletion (Issue 6): requires a fresh
+    SENSITIVE_ACTION OTP. Anonymises the personal data while keeping the
+    community's reports (ownership anonymised) and the audit trail.
+    """
+    import re
+    from flask_jwt_extended import get_jwt
+    user = current_user()
+    data = request.get_json(silent=True) or {}
+    _require_sensitive_otp(user, data)
+
+    # anonymise: nothing that identifies the person survives in the users row
+    user.name = "Deleted User"
+    user.email = f"deleted-{user.id}@invalid.example"
+    user.phone = None
+    user.is_active = False
+    user.token_version = (user.token_version or 0) + 1  # revoke every session
+    audit_svc.log_action("account_deleted", actor=user, target_type="user",
+                         target_id=user.id,
+                         details={"mode": "self-service-anonymise"})
+    jti = get_jwt().get("jti")
+    if jti:
+        from ..models import TokenBlocklist
+        db.session.add(TokenBlocklist(jti=jti, token_type="access", user_id=user.id))
+    db.session.commit()
+    return jsonify({"data": {"deleted": True,
+                             "note": "Personal data anonymised; reports remain without owner identity."}})
+
+
 @auth_bp.patch("/me")
 def update_me():
     user = current_user()
