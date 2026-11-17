@@ -58,11 +58,18 @@ def register(app):
             click.echo(f"Purged {n} expired OTP challenges.")
 
     @app.cli.command("reindex")
-    def reindex():
+    @click.option("--backend", type=click.Choice(["stub", "onnx", "real"]), default=None,
+                  help="Re-embed everything with this backend before matching. "
+                       "Safe switch procedure: reindex FIRST, then flip the env var.")
+    def reindex(backend):
         """Recompute all embeddings and matches."""
+        if backend:
+            app.config["EMBEDDING_BACKEND"] = backend
+        from app.services.embeddings import reset_embedder, backend_model_name
+        reset_embedder()
         from app.services.jobs import reindex_all
         reindex_all(app)
-        click.echo("Reindex complete.")
+        click.echo(f"Reindex complete (embedding_model={backend_model_name(app.config['EMBEDDING_BACKEND'])}).")
 
     @app.cli.command("expire-reports")
     def expire_reports():
@@ -134,6 +141,25 @@ def register(app):
             n = TokenBlocklist.query.filter(TokenBlocklist.revoked_at < cutoff).delete()
             db.session.commit()
             click.echo(f"Deleted {n} blocklist entries.")
+
+    @app.cli.command("check-images")
+    def check_images():
+        """List image rows whose object is missing from storage (Issue 5)."""
+        from app.extensions import db
+        from app.models import ClaimImage, ReportImage
+        from app.services.storage import get_storage
+        with app.app_context():
+            st = get_storage()
+            missing = 0
+            for model, label in ((ReportImage, "report_images"),
+                                 (ClaimImage, "claim_images")):
+                for img in model.query.all():
+                    try:
+                        st.open(img.storage_key)
+                    except Exception:
+                        missing += 1
+                        click.echo(f"MISSING {label} id={img.id} key={img.storage_key}")
+            click.echo(f"check-images done: {missing} missing object(s)")
 
 
 def wipe(db):
