@@ -42,6 +42,10 @@ class Report(db.Model):
     status = Column(Enum(ReportStatus), nullable=False, default=ReportStatus.ACTIVE)
     processing_status = Column(Enum(ProcessingStatus), nullable=False, default=ProcessingStatus.PENDING)
     text_embedding = Column(LargeBinary, nullable=True)
+    # Issue 1: provenance of the text vector above — matching only compares
+    # vectors whose embedding_model id is identical (never mixes spaces)
+    embedding_model = Column(String(80), nullable=True)
+    embedding_dim = Column(Integer, nullable=True)
     removed_reason = Column(String(255), nullable=True)
     created_at = Column(DateTime, nullable=False, default=utcnow)
     updated_at = Column(DateTime, nullable=False, default=utcnow, onupdate=utcnow)
@@ -121,6 +125,9 @@ class ReportImage(db.Model):
     size_bytes = Column(Integer, nullable=True)
     position = Column(Integer, nullable=False, default=0)
     embedding = Column(LargeBinary, nullable=True)
+    # Issue 1: provenance of the image vector above
+    embedding_model = Column(String(80), nullable=True)
+    embedding_dim = Column(Integer, nullable=True)
     created_at = Column(DateTime, nullable=False, default=utcnow)
 
     report = db.relationship("Report", back_populates="images")
