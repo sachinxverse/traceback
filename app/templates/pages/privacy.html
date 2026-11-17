@@ -1,0 +1,50 @@
+# Privacy Policy — TRACEBACK
+
+Last updated: 2026-11-17. This policy describes what the app collects,
+who can see it, how long it is kept and how to delete it.
+
+## What we collect
+
+- **Account:** name, email address, optional phone number, hashed
+  password (never the password itself).
+- **Reports:** item title, description, category, date/time, GPS
+  coordinates or place text, and up to a few photos you upload.
+  Photos are stripped of EXIF metadata (including location) before
+  storage.
+- **Optional private details** on a report (serial numbers, marks):
+  visible only to the report owner and the claim reviewer.
+- **Operational records:** a security audit log of sensitive actions,
+  and one-time-code login records (codes are stored hashed, never
+  readable).
+
+## Who sees what
+
+- Your name is shown publicly as **first name only**.
+- Your email/phone are **never** shown to other users; in-app chat is
+  the only contact channel, and messages are visible to the two
+  participants (and admins for abuse handling).
+- Report photos are served only to signed-in users allowed to see the
+  report; they are never public URLs.
+- Staff of an institution see reports tied to their institution; admins
+  see everything for moderation and the audit log.
+
+## Retention
+
+- Reports auto-expire **180 days** after the incident date (configurable
+  `REPORT_RETENTION_DAYS`) and are purged by a scheduled cleanup task.
+- Chat messages are purged 30 days after a claim closes.
+- Login one-time codes expire within minutes and are purged daily.
+- Backups (managed Postgres / GitHub Actions artifacts) rotate within
+  14 days.
+
+## Deleting your data
+
+- **Self-service:** Profile → "Delete my account". This immediately
+  revokes all your sessions, anonymises your account (name replaced
+  with "Deleted User", email/phone replaced with non-identifying
+  placeholders) and keeps the community's lost/found records and the
+  security audit trail, which are required for dispute handling.
+- **Full erasure request:** contact the operators via the address on
+  record in the repository owner's GitHub profile; requests are
+  processed within 30 days except where retention is legally required
+  (audit records).
