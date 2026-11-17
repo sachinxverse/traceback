@@ -70,6 +70,47 @@ export function warmUp() {
   });
 }
 
+// Outbound link interception: a plain <a href> navigation on a sleeping
+// instance hangs silently for up to ~50 s with zero feedback (the banner
+// above only covers in-page API calls and fresh page loads). Intercept
+// internal link clicks, wake the instance first, then navigate.
+function isInternalLink(el) {
+  if (!(el instanceof HTMLAnchorElement)) return false;
+  if (el.target && el.target !== '_self') return false;
+  if (el.hasAttribute('download')) return false;
+  if (el.getAttribute('href')?.startsWith('#')) return false;
+  const href = new URL(el.href, location.href);
+  return href.origin === location.origin;
+}
+
+document.addEventListener('click', async (ev) => {
+  if (ev.defaultPrevented || ev.button !== 0 || ev.metaKey || ev.ctrlKey ||
+      ev.shiftKey || ev.altKey) return;
+  const link = ev.target.closest('a');
+  if (!link || !isInternalLink(link)) return;
+  ev.preventDefault();
+  const href = link.href;
+  // If the instance answers quickly, navigate straight away; otherwise show
+  // the wake banner until the instance is warm, then continue navigating.
+  const t0 = Date.now();
+  ensureBanner();
+  let warm = false;
+  try {
+    const r = await Promise.race([
+      fetch(API + '/health', { cache: 'no-store' }),
+      new Promise(res => setTimeout(() => res(null), 2500)),
+    ]);
+    warm = Boolean(r && r.ok);
+  } catch (e) { warm = false; }
+  if (!warm && Date.now() - t0 < 2500) {
+    // health endpoint not answered within budget — poll until awake
+    await waitForWake();
+  } else {
+    hideBanner();
+  }
+  window.location.href = href;
+}, true);
+
 // Auto-run on import so every page benefits, including a cold load.
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', warmUp);
