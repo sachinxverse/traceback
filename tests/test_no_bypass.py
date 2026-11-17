@@ -58,7 +58,7 @@ def test_production_refuses_dev_echo_and_mail_off():
     env = {
         "SECRET_KEY": "s" * 40, "JWT_SECRET_KEY": "j" * 40,
         "DATABASE_URL": "postgresql+psycopg2://u:p@localhost/db",
-        "MAIL_ENABLED": "true",
+        "MAIL_ENABLED": "true", "STORAGE_BACKEND": "s3", "S3_BUCKET": "b",
     }
     old = {k: os.environ.get(k) for k in env}
     try:
