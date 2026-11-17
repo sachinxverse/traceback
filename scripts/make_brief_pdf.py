@@ -140,7 +140,7 @@ pdf.cell(0, 7, "Repository: github.com/sachinxverse/traceback",
 pdf.ln(4)
 for line in ["235 API tests + 13 Playwright E2E tests passing · 82% coverage",
              "109 Python modules · 18 pages · 3 migrations · 14 live institutions",
-             "P@1 = 1.0 on the matching eval set · 49 recorded decisions"]:
+             "evaluation harness with tune/test splits, bootstrap CIs · 51 recorded decisions"]:
     pdf.set_font("seg", "", 9)
     pdf.cell(0, 6, line, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C")
 
@@ -213,7 +213,7 @@ pdf.table(
     [
         ["Flask-JWT-Extended 4.7", "Stateless tokens + refresh flow; paired with a DB blocklist for real revocation",
          "All /api/v1 auth; token-version revocation (password change kills old sessions instantly); HttpOnly cookies + CSRF double-submit — never localStorage, so XSS cannot steal sessions"],
-        ["Custom OTP service (app/services/otp.py)", "Passwordless verified login was required; naive plaintext OTP storage is a common flaw we avoided",
+        ["Custom OTP service (app/services/otp.py)", "Two-step verification (password + one-time code) was required; naive plaintext OTP storage is a common flaw we avoided",
          "3 separate portals (user/staff/admin), each 2-step: credentials → 6-digit code. Codes are HMAC-SHA256-hashed, secrets.randbelow-generated, single-use, 5-min expiry, 5 attempts, 30 s resend cooldown, 3 resends / 5 per hour, bound to portal+purpose+IP+UA"],
         ["OtpSender adapters (strategy pattern)", "Swap delivery channel without touching business logic; production refuses to boot with a dev sender",
          "console (dev) / email (Brevo SMTP, production) / sms (future) / testing (test double)"],
@@ -237,7 +237,7 @@ pdf.table(
         ["Embedding backends (app/services/embeddings.py)", "Free-tier Render has 512 MB — torch won't fit; the adapter keeps the interface identical so upgrading is one env var",
          "stub (deterministic hashed bag-of-words) in production today; real (torch + open_clip + sentence-transformers, lazy-loaded) via EMBEDDING_BACKEND=real — no code change"],
         ["scripts/evaluate_matching.py", "“The AI works” must be measured, not claimed",
-         "Offline evaluation harness; Precision@1 = 1.0 on the seeded eval set"],
+         "Offline evaluation harness: sample sizes, P@1/P@3/R@3, MRR, FPR, ablation, 95% bootstrap CIs over a labelled tune/test split"],
     ],
     [1.5, 1.6, 2.1])
 
@@ -344,7 +344,7 @@ pdf.ln(4)
 pdf.h1("12. Key numbers")
 for line in ["235 API tests + 13 Playwright E2E tests · 82% coverage",
              "109 Python modules · 18 pages · 3 migrations · 14 live institutions",
-             "P@1 = 1.0 on the matching eval set · 49 recorded architecture decisions",
+             "matching eval harness with sample sizes and bootstrap CIs · 51 recorded architecture decisions",
              "LIVE: https://traceback-333g.onrender.com",
              "Repo: github.com/sachinxverse/traceback"]:
     pdf.set_font("seg", "B", 10)
