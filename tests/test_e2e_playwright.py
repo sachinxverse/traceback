@@ -220,3 +220,35 @@ def test_e2e_full_recovery_flow(live_server):
                 f"{name}: horizontal scroll at 375px ({scroll_w}>{client_w})"
 
         browser.close()
+
+
+@pytest.mark.e2e
+def test_e2e_coldstart_link_interception(live_server):
+    """Internal link clicks wake a sleeping instance first (Issue 4.4 UX).
+
+    Warm path: /health answers fast -> the click navigates immediately.
+    Simulated cold path: /health is delayed via Playwright routing -> the
+    coldstart banner must appear BEFORE navigation completes.
+    """
+    base = live_server["base"]
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page()
+
+        # warm path: clicking the hero CTA navigates straight to the login
+        # redirect (the report form requires auth)
+        page.goto(f"{base}/")
+        page.click("a[href='/report/lost']")
+        page.wait_for_url("**/login?next=/report/lost", timeout=10000)
+
+        # simulated cold path: delay the health endpoint 3s so the click
+        # handler takes the banner branch
+        page.route("**/api/v1/health", lambda route: (
+            page.wait_for_timeout(3000) or route.continue_()))
+        page.goto(f"{base}/")
+        page.click("a[href='/report/found']")
+        page.wait_for_selector("#coldstart-banner", timeout=8000)
+        # navigation still completes once the health check answers
+        page.wait_for_url("**/login?next=/report/found", timeout=15000)
+
+        browser.close()
