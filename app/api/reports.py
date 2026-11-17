@@ -35,6 +35,15 @@ def _parse_coordinates(data):
 
 
 def _create_report(user, data, files):
+    # Issue 7: in Mode A only STAFF/ADMIN may file FOUND reports. USER is
+    # a dataclass-like row from the DB — compare role values.
+    if (data["report_type"] == "FOUND"
+            and user.role.value == "USER"
+            and not current_app.config.get("ALLOW_PUBLIC_FOUND_REPORTS", True)):
+        raise ApiError("FORBIDDEN",
+                       "Found reports are accepted by institution staff only. "
+                       "Please hand the item in at an institution desk.",
+                       status=403)
     report = Report(
         user_id=user.id,
         report_type=ReportType(data["report_type"]),
