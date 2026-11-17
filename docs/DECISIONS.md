@@ -221,3 +221,12 @@ as required by Section 1.2 and acceptance criterion A16.
     /api/v1/images/{id} endpoints; health includes a storage probe;
     missing objects render a placeholder (never 500); `flask
     check-images` lists rows whose object is missing.
+54. **Cold-start link interception.** On the free tier the service sleeps
+    after ~15 min idle; a plain `<a href>` navigation then hangs silently
+    for up to ~50 s with zero feedback (the warm-up banner only covered
+    in-page fetches). coldstart.js now intercepts clicks on internal
+    links: it probes /api/v1/health first, shows the "waking up" banner
+    if the instance is asleep, and only navigates once the server is
+    warm. External links, modifier/middle clicks, downloads and
+    hash-links pass through untouched. Covered by a Playwright e2e test
+    that simulates the asleep path by delaying /health 3 s.
