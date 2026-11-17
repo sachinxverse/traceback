@@ -1,0 +1,9 @@
+pair_id,category,split,lost_image,lost_title,lost_desc,lost_place,lost_lat,lost_lng,lost_time,found_image,found_title,found_desc,found_place,found_lat,found_lng,found_time,is_same_item
+real_001,ELECTRONICS,tune,objects/object_01_a.jpg,,,,,,,objects/object_01_b.jpg,,,,,,,1
+real_002,WALLETS_CARDS,tune,objects/object_02_a.jpg,,,,,,,objects/object_02_b.jpg,,,,,,,1
+real_003,KEYS,test,objects/object_03_a.jpg,,,,,,,objects/object_03_b.jpg,,,,,,,1
+real_004,CLOTHING,tune,objects/object_04_a.jpg,,,,,,,objects/object_04_b.jpg,,,,,,,1
+real_005,JEWELLERY,tune,objects/object_05_a.jpg,,,,,,,objects/object_05_b.jpg,,,,,,,1
+real_006,BOOKS_STATIONERY,test,objects/object_06_a.jpg,,,,,,,objects/object_06_b.jpg,,,,,,,1
+real_007,BOTTLES,tune,objects/object_07_a.jpg,,,,,,,objects/object_07_b.jpg,,,,,,,1
+real_008,UMBRELLAS,tune,objects/object_08_a.jpg,,,,,,,objects/object_08_b.jpg,,,,,,,1
