@@ -8,8 +8,14 @@ import threading
 
 import numpy as np
 
-IMAGE_DIM = 512   # OpenCLIP ViT-B-32
-TEXT_DIM = 384    # all-MiniLM-L6-v2
+IMAGE_DIM = 512   # OpenCLIP ViT-B-32 (both stub, onnx and real produce this)
+TEXT_DIM = 384    # all-MiniLM-L6-v2 (stub, onnx and real all produce this)
+
+# embedding_model identifiers stored next to every vector; matching only
+# compares vectors that share the same model id (never mixes spaces)
+MODEL_STUB = "stub-bow-v1"        # text+image hashed signatures
+MODEL_ONNX = "onnx-minilm-l6-v2+nomic-vision-v15-q:v1"
+MODEL_REAL = "openclip-vitb32-laion2b+minilm-l6-v2:v1"
 
 
 # ---------------------------------------------------------------- blob helpers
@@ -78,6 +84,62 @@ class StubEmbedder:
             filled += base.size
         vec[filled:filled + (IMAGE_DIM - filled)] = base[:IMAGE_DIM - filled]
         return l2normalise(vec)
+
+
+# ------------------------------------------------------------------- onnx
+class OnnxEmbedder:
+    """ONNX Runtime backend (Issue 1): real models without PyTorch.
+
+    Text:  sentence-transformers/all-MiniLM-L6-v2 (384d, ~90 MB fp32 ONNX)
+    Image: nomic-ai/nomic-embed-vision-v1.5-Q (768d, quantised, ~100 MB)
+    served by fastembed (ONNX Runtime). Measured on Windows (psutil):
+    interpreter+text ≈ 200 MB RSS, +image ≈ 250-290 MB — fits a 512 MB
+    container with one Gunicorn worker and ~25% headroom; two workers do
+    NOT fit, production therefore runs -w 1 --threads 8.
+
+    Text and image models load independently: if the image model cannot be
+    loaded (e.g. out of memory), embed_image raises EmbeddingUnavailable and
+    the caller falls back to text-only matching instead of crashing.
+    """
+
+    _text_model_name = "sentence-transformers/all-MiniLM-L6-v2"
+    _image_model_name = "nomic-ai/nomic-embed-vision-v1.5-Q"
+
+    def __init__(self):
+        self._text = None
+        self._image = None
+        self._lock = threading.Lock()
+
+    @property
+    def text_model(self):
+        with self._lock:
+            if self._text is None:
+                from fastembed import TextEmbedding
+                self._text = TextEmbedding(model_name=self._text_model_name)
+            return self._text
+
+    @property
+    def image_model(self):
+        with self._lock:
+            if self._image is None:
+                from fastembed import ImageEmbedding
+                self._image = ImageEmbedding(model_name=self._image_model_name)
+            return self._image
+
+    def embed_text(self, text: str) -> np.ndarray:
+        vecs = list(self.text_model.embed([text or ""]))
+        return np.asarray(vecs[0], dtype=np.float32)
+
+    def embed_image(self, data: bytes) -> np.ndarray:
+        import io
+        from PIL import Image
+        img = Image.open(io.BytesIO(data)).convert("RGB")
+        vecs = list(self.image_model.embed([img]))
+        return np.asarray(vecs[0], dtype=np.float32)
+
+
+class EmbeddingUnavailable(RuntimeError):
+    """A backend component failed to load (OOM, missing model, ...)."""
 
 
 # ------------------------------------------------------------------- real
@@ -157,9 +219,16 @@ def get_embedder(app=None):
                     cfg = app.config if app else current_app.config
                     _embedder = RealEmbedder(cfg["CLIP_MODEL"], cfg["CLIP_PRETRAINED"],
                                              cfg["TEXT_MODEL"])
+                elif backend == "onnx":
+                    _embedder = OnnxEmbedder()
                 else:
                     _embedder = StubEmbedder()
     return _embedder
+
+
+def backend_model_name(backend: str) -> str:
+    """The embedding_model id vectors produced by this backend carry."""
+    return {"stub": MODEL_STUB, "onnx": MODEL_ONNX, "real": MODEL_REAL}[backend]
 
 
 def reset_embedder() -> None:
