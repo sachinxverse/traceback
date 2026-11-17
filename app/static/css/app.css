@@ -505,3 +505,12 @@ a.stretched-link-card { color: inherit; }
 .form-error.show { display: block; }
 .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
 .btn-ghost:hover { background: var(--surface-2, #EEF2F7); }
+
+/* Cold-start banner (Issue 4.4): shown while the free-tier instance wakes. */
+.coldstart-banner { position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: 24px; z-index: 2000; background: var(--navy, #0B1F3A); color: #fff;
+  padding: .6rem 1.1rem; border-radius: 999px; font-size: .9rem;
+  box-shadow: 0 8px 24px rgba(11,31,58,.35); display: flex;
+  align-items: center; gap: .5rem; }
+.coldstart-banner .spinner-border-sm { width: 1rem; height: 1rem;
+  color: var(--teal, #0D9488); }
