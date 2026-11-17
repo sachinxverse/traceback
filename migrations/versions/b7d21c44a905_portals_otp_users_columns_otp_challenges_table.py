@@ -28,7 +28,9 @@ def upgrade():
         batch_op.add_column(sa.Column('token_version', sa.Integer(),
                                       nullable=False, server_default='0'))
     # C4: existing users (seeded or created before OTP) must not be locked out.
-    op.execute("UPDATE users SET email_verified = 1")
+    # portable backfill: TRUE works on SQLite and PostgreSQL alike (=1 is
+    # SQLite-only and fails on PostgreSQL with DatatypeMismatch)
+    op.execute("UPDATE users SET email_verified = TRUE")
 
     # --- otp_challenges -------------------------------------------------------
     op.create_table('otp_challenges',
