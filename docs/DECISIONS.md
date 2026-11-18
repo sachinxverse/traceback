@@ -230,3 +230,13 @@ as required by Section 1.2 and acceptance criterion A16.
     warm. External links, modifier/middle clicks, downloads and
     hash-links pass through untouched. Covered by a Playwright e2e test
     that simulates the asleep path by delaying /health 3 s.
+55. **OTP email over HTTPS API, not SMTP.** Render blocks outbound SMTP
+    ports (25/465/587) on its plans, so Flask-Mail (SMTP) timed out in
+    production even with correct credentials (verified: local smtplib
+    send to the same relay succeeded, the Render deploy logged
+    `OTP delivery failed: TimeoutError`). Added `EmailApiSender`
+    (`OTP_SENDER=emailapi`, `MAIL_API_PROVIDER=mailjet`): a single
+    HTTPS POST to Mailjet's Send API v3.1 with the API key/secret pair
+    stored in MAIL_USERNAME/MAIL_PASSWORD — port 443 is never blocked.
+    SMTP path (`OTP_SENDER=email`) is kept for hosts that allow it.
+    Unit tests cover the payload, auth pair and provider guard.
