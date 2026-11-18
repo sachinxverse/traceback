@@ -138,9 +138,10 @@ pdf.set_text_color(*GREY)
 pdf.cell(0, 7, "Repository: github.com/sachinxverse/traceback",
          new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C")
 pdf.ln(4)
-for line in ["235 API tests + 13 Playwright E2E tests passing · 82% coverage",
-             "109 Python modules · 18 pages · 3 migrations · 14 live institutions",
-             "evaluation harness with tune/test splits, bootstrap CIs · 51 recorded decisions"]:
+for line in ["270 automated tests: API + unit + real-browser E2E (last full run 254 passed / 3 skipped) · 82% coverage",
+             "109 Python modules · 18 pages · 4 migrations · 14 live institutions",
+             "onnx matching engine live in production · eval harness with tune/test splits and bootstrap CIs",
+             "55 recorded decisions · production-readiness spec (7 issues) implemented and verified"]:
     pdf.set_font("seg", "", 9)
     pdf.cell(0, 6, line, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C")
 
@@ -164,12 +165,17 @@ pdf.code(
 "                        handover --> recovery confirmed (audited, timed)")
 pdf.h2("Status (production, today)")
 pdf.bullet("Deployed live on Render with managed PostgreSQL 16: "
-           "https://traceback-333g.onrender.com (health: {\"db\":\"ok\",\"status\":\"ok\"}).")
+           "https://traceback-333g.onrender.com (health reports db, embedding "
+           "backend + model name, and a storage probe — all ok).")
 pdf.bullet("14 real institutions seeded across all 10 types (colleges, railway "
            "stations, airports, bus terminal, mall, venue, hotel, public space).")
-pdf.bullet("235 API tests + 13 Playwright browser tests passing, 82% coverage.")
-pdf.bullet("Working OTP email delivery pipeline (Brevo SMTP) and a "
-           "guard-tested UI with zero dummy buttons or hard-coded data.")
+pdf.bullet("270 automated tests; 82% coverage; onnx AI matching engine live in "
+           "production with per-row model tracking (never mixes vector spaces).")
+pdf.bullet("OTP emails delivered to real inboxes via the Mailjet HTTPS Send API "
+           "— verified end-to-end: code generated, emailed, arrived, verified, "
+           "session established.")
+pdf.bullet("Cold-start UX: the free tier sleeps, so link clicks wake the server "
+           "behind a 'waking up' banner instead of hanging silently.")
 
 # ======================================================== 2. STACK: BACKEND
 pdf.add_page()
@@ -184,7 +190,7 @@ pdf.table(
         ["Jinja2 (with Flask)", "Server-rendered pages: no build step, no SPA complexity, CSP-safe (no inline scripts needed)",
          "Renders the 18+ pages (index, browse, report form, match detail, claim detail, staff & admin dashboards…) from a shared base.html"],
         ["Gunicorn 27", "Flask's dev server is single-threaded; Gunicorn adds process management, graceful restarts, timeouts",
-         "Runs production: 2 workers × 4 threads, 120 s timeout on Render"],
+         "Runs production: 1 worker × 8 threads (sized to the onnx embedder's memory budget), 120 s timeout on Render"],
     ],
     [1.2, 1.5, 2.5])
 
@@ -201,7 +207,7 @@ pdf.table(
         ["Flask-Migrate 4.1 + Alembic", "Migrations make schema changes reviewable, reversible and CI-runnable (hand-written SQL rots)",
          "3 migrations (initial schema → demo columns → portals/OTP columns), run automatically on every deploy via flask init-db"],
         ["SQLite (dev/test only)", "Zero-config; tests run 10× faster with no server",
-         "Local development and the whole 235-test suite; the SQLite/Postgres boolean difference exposed a real migration bug we fixed portably"],
+         "Local development and the test suite; the SQLite/Postgres boolean difference exposed a real migration bug we fixed portably"],
     ],
     [1.5, 1.7, 2.0])
 
@@ -216,7 +222,7 @@ pdf.table(
         ["Custom OTP service (app/services/otp.py)", "Two-step verification (password + one-time code) was required; naive plaintext OTP storage is a common flaw we avoided",
          "3 separate portals (user/staff/admin), each 2-step: credentials → 6-digit code. Codes are HMAC-SHA256-hashed, secrets.randbelow-generated, single-use, 5-min expiry, 5 attempts, 30 s resend cooldown, 3 resends / 5 per hour, bound to portal+purpose+IP+UA"],
         ["OtpSender adapters (strategy pattern)", "Swap delivery channel without touching business logic; production refuses to boot with a dev sender",
-         "console (dev) / email (Brevo SMTP, production) / sms (future) / testing (test double)"],
+         "console (dev) / email (SMTP) / emailapi (Mailjet HTTPS Send API — production, because the host blocks SMTP ports) / sms (future) / testing (test double)"],
         ["marshmallow 3.26 (pinned 3.x)", "Declarative boundary validation; 4.x incompatible — pinning is deliberate",
          "Every request body: reports, claims, institutions, admin edits; enforces password policy, lat/lng ranges, enums, lengths"],
         ["Flask-Limiter 4.1", "Stops OTP brute force and enumeration",
@@ -234,8 +240,8 @@ pdf.table(
          "Fuses embedding similarity + geographic proximity boost + category/type compatibility + time decay + text overlap into ranked, explainable match scores shown to users"],
         ["NumPy 2.5", "Embedding similarity is dot products/normalization — fast without torch",
          "Cosine similarity over report embeddings"],
-        ["Embedding backends (app/services/embeddings.py)", "Free-tier Render has 512 MB — torch won't fit; the adapter keeps the interface identical so upgrading is one env var",
-         "stub (deterministic hashed bag-of-words) in production today; real (torch + open_clip + sentence-transformers, lazy-loaded) via EMBEDDING_BACKEND=real — no code change"],
+        ["Embedding backends (app/services/embeddings.py)", "Free-tier Render has 512 MB — fp32 torch won't fit; measured all three backends and picked onnx (fastembed: MiniLM text + quantised Nomic vision, ~10 ms/text)",
+         "onnx backend live in production; per-row embedding_model + embedding_dim columns (migration) mean candidates from different vector spaces are never mixed; flask reindex --backend re-embeds safely; stub and real (torch) remain one env var away"],
         ["scripts/evaluate_matching.py", "“The AI works” must be measured, not claimed",
          "Offline evaluation harness: sample sizes, P@1/P@3/R@3, MRR, FPR, ablation, 95% bootstrap CIs over a labelled tune/test split"],
     ],
@@ -272,11 +278,11 @@ pdf.table(
     ["Technology", "Why it was chosen", "What it does here"],
     [
         ["pytest 9.2", "Standard, fixture-friendly",
-         "22 test files / 235 API tests: portals (12), OTP (16), no-bypass (8), E2E portals (7), UI theme (5), security, claims, matching, admin analytics…"],
+         "25 test files / 270 tests: portals, OTP, no-bypass, production-readiness (embeddings, storage, eval, found-modes, privacy, final-verification), UI theme, security, claims, matching, admin analytics…"],
         ["pytest-cov 7.1", "Unmeasured code is untested code",
          "82% coverage gate"],
         ["Playwright", "API tests cannot catch a broken UI",
-         "13 real-browser tests crawling every page × role × 375/1280 viewports; a guard test fails the build on dead links, javascript: hrefs, localhost strings or demo credentials in shipped code"],
+         "Real-browser tests: the full recovery flow end-to-end, the cold-start link-interception path, every-page-alive crawls across role × viewport; guard tests fail the build on dead links, javascript: hrefs, banned-wording guards, or demo credentials in shipped code"],
         ["Ruff", "Fast linter: catches bugs and style in one pass",
          "ruff.toml enforced across all modules"],
         ["fpdf2", "Docs as deliverables",
@@ -300,8 +306,8 @@ pdf.table(
          "Local .env; production env vars in the Render dashboard"],
         ["email-validator 2.3", "Stop garbage signups at the boundary",
          "marshmallow Email fields"],
-        ["Brevo SMTP", "Free 300 emails/day, no custom domain needed",
-         "Real OTP email delivery in production (verified sender)"],
+        ["Mailjet Send API (HTTPS)", "Free 6,000 emails/month, no phone verification (Brevo and SMTP2GO both gate on SMS), and no SMTP ports needed — Render blocks outbound 25/465/587",
+         "Real OTP email delivery in production: OTP_SENDER=emailapi POSTs to api.mailjet.com/v3.1/send; verified sender TRACEBACK <rajydvk225@gmail.com>; end-to-end verified live"],
     ],
     [1.3, 1.5, 2.4])
 
@@ -319,10 +325,11 @@ pdf.code(
 "----------------------------- Browser --------------------------------\n"
 "| Jinja2 pages + vanilla JS modules + Leaflet maps                    |\n"
 "| Design tokens | WCAG AA | CSP: no inline scripts                    |\n"
+"| coldstart.js: wakes sleeping instance behind a banner               |\n"
 "-----------------------|----------------------------------------------\n"
 "          HTTPS | HttpOnly JWT cookies + CSRF double-submit\n"
 "----------------|-----------------------------------------------------\n"
-"|                    Flask app (Gunicorn x2x4)                        |\n"
+"|                    Flask app (Gunicorn 1×8)                         |\n"
 "|   /web pages          /api/v1 REST (14 blueprints)                  |\n"
 "|   [ Guardrails: portal before_request, marshmallow,              ]  |\n"
 "|   [ Flask-Limiter, config.validate(): refuses weak secrets      ]   |\n"
@@ -330,21 +337,54 @@ pdf.code(
 "|             geo | audit | notifications | analytics | jobs         |\n"
 "------|------------------|---------------------|----------------------\n"
 "      |                  |                     |\n"
-" PostgreSQL 16      Brevo SMTP         (optional) torch embeddings\n"
-" (Render managed)     OTP emails         EMBEDDING_BACKEND=real")
+" PostgreSQL 16     Mailjet Send API   onnx embeddings (fastembed)\n"
+" (Render managed)   OTP via HTTPS 443   MiniLM + quantised Nomic vision")
 pdf.ln(4)
 pdf.h1("11. Security engineering")
 pdf.bullet("Three portals, one generic error. Wrong-portal logins return the same 'Invalid credentials' — no account enumeration; the portal claim is enforced at blueprint before_request, so the UI cannot be bypassed.")
 pdf.bullet("OTP done right. Hashed at rest, single-use, expiring, rate-limited, resend-capped, bound to portal+purpose+IP+UA; a REGISTER challenge can't complete a PASSWORD_RESET and vice-versa.")
 pdf.bullet("Revocable sessions. token_version column: a password change kills every old JWT instantly; used jti's go to a blocklist.")
-pdf.bullet("Self-defending config. Production refuses weak/placeholder secrets (<32 chars or words like 'secret'/'password'), refuses SQLite unless forced, and refuses dev OTP senders — this guardrail caught two failed deploys before the third succeeded.")
-pdf.bullet("Privacy by default. EXIF stripped from photos; only first names shown publicly.")
+pdf.bullet("Self-defending config. Production refuses weak/placeholder secrets (<32 chars or words like 'secret'/'password'), refuses SQLite unless forced, refuses dev OTP senders, and refuses ephemeral local-disk storage unless ALLOW_EPHEMERAL_STORAGE is set explicitly — these guardrails caught four failed deploys before the final one went green, exactly as designed.")
+pdf.bullet("Privacy by default. EXIF stripped from photos; only first names shown publicly; /privacy and /terms pages, RFC 9116 security.txt, and self-service account deletion (anonymises the account, requires a SENSITIVE_ACTION OTP).")
 pdf.bullet("Audited everything. Every sensitive action writes to an AuditLog; admins see it live.")
+pdf.bullet("Honest hosting limits. docs/DEPLOYMENT.md documents the verified free-tier limits (512 MB / 0.1 CPU, DB expiry date), a daily pg_dump backup workflow with row-count verification, and a demo-day cold-start checklist.")
 pdf.ln(4)
-pdf.h1("12. Key numbers")
-for line in ["235 API tests + 13 Playwright E2E tests · 82% coverage",
-             "109 Python modules · 18 pages · 3 migrations · 14 live institutions",
-             "matching eval harness with sample sizes and bootstrap CIs · 51 recorded architecture decisions",
+# ==================================== 11b. PRODUCTION-READINESS HARDENING
+pdf.h1("12. Production-readiness & honesty hardening")
+pdf.body("A later 7-issue readiness spec was implemented in order, each with code, "
+         "docs, tests and measured proof — the theme: make the deployment honest "
+         "and the claims measured, not asserted.")
+pdf.table(
+    ["Issue", "What was done", "Proof / behaviour today"],
+    [
+        ["1. Honest embedding backend", "Measured stub / onnx / real backends (psutil): real PyTorch needs 566–698 MB (won't fit 512 MB); chose onnx (fastembed 0.9.1: MiniLM text 10 ms, quantised Nomic vision)",
+         "Health reports the live model name; per-row embedding_model/dim migration; cross-model matching impossible; flask reindex --backend + safe-switch procedure in docs/EMBEDDING_BENCHMARK.md"],
+        ["2. Honest evaluation", "Rewrote scripts/evaluate_matching.py: labelled eval dataset separate from demo data, tune/test splits, P@1/P@3/R@3/MRR, FPR, ablation, 95% bootstrap CIs; scrubbed unqualified accuracy claims from README/PDFs",
+         "Synthetic smoke set documented as NOT validating accuracy (FPR 0.53 on hard negatives); real-photo collection protocol in eval/README.md"],
+        ["3. Correct flow wording", "Replaced the factually wrong claim that sign-in needs no password with the accurate description: password + one-time code, everywhere",
+         "tests/test_no_passwordless.py guard fails the build on the word"],
+        ["4. Hosting limits honesty", "Verified limits written down (512 MB / 0.1 CPU, DB expiry 2026-12-16); backup/restore scripts; daily backup workflow; cold-start banner",
+         "docs/DEPLOYMENT.md + .github/workflows/backup.yml + scripts/backup_db.sh / restore_db.sh + coldstart.js (link interception tested by Playwright)"],
+        ["5. Ephemeral uploads", "Production refuses local-disk storage unless ALLOW_EPHEMERAL_STORAGE=true is set explicitly; S3-compatible storage (AWS/R2/B2) with migration script and graceful missing-object placeholder; health includes a storage probe",
+         "The guard fired for real: two Render deploys failed with the exact RuntimeError until the env was fixed — then went green"],
+        ["6. Privacy & secret audit", "detect-secrets scan (25 findings, all false positives); git history swept for real credentials and personal emails; SECURITY.md; /privacy + /terms pages; security.txt; self-service account deletion with SENSITIVE_ACTION OTP",
+         "docs/SECURITY_AUDIT.md; zero real secrets in repo or history"],
+        ["7. Found-report scope", "Who can file FOUND reports is configurable: Mode B (public, default) or Mode A (staff-only via ALLOW_PUBLIC_FOUND_REPORTS=false); custody radio hints explain reviewer rules",
+         "tests/test_found_modes.py: Mode A blocks user filings 403, staff allowed; UI hints tested"],
+    ],
+    [1.35, 2.2, 2.2])
+
+pdf.h2("What deployment failures proved the guardrails work")
+pdf.bullet("Portable-SQL bug: the Alembic backfill 'SET email_verified = 1' is legal SQLite but PostgreSQL rejected it — fixed to '= TRUE' and documented (Decision #47).")
+pdf.bullet("Storage guard: production refused to boot with ephemeral local disk until explicitly overridden (Decision #53) — caught twice by the guard itself.")
+pdf.bullet("SMTP block: Flask-Mail timed out in production because Render blocks outbound SMTP ports; replaced by the Mailjet HTTPS API sender (Decision #55) and verified end-to-end.")
+pdf.bullet("Env-editor pitfall: the Render dashboard's env dialog blanks values on re-open; every save was verified value-by-value before deploying.")
+pdf.ln(4)
+pdf.h1("13. Key numbers")
+for line in ["270 automated tests · full suite 270/270 passed · 82% coverage · 9 real-browser E2E",
+             "109 Python modules · 18 pages · 4 migrations · 14 live institutions",
+             "measured backends: onnx chosen over torch on RAM · eval with sample sizes + bootstrap CIs",
+             "55 recorded decisions · OTP via Mailjet HTTPS · cold-start link interception",
              "LIVE: https://traceback-333g.onrender.com",
              "Repo: github.com/sachinxverse/traceback"]:
     pdf.set_font("seg", "B", 10)
