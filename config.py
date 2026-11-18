@@ -142,6 +142,8 @@ class BaseConfig:
     MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
     MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER", "noreply@traceback.local")
     MAIL_USE_TLS = os.environ.get("MAIL_USE_TLS", "false").lower() in ("1", "true", "yes")
+    # HTTP mail API (used by OTP_SENDER=emailapi when the host blocks SMTP ports)
+    MAIL_API_PROVIDER = os.environ.get("MAIL_API_PROVIDER", "")
 
     # Rate limiting
     RATELIMIT_ENABLED = True
