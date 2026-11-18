@@ -240,20 +240,32 @@ class EmailOtpSender(OtpSender):
 
     name = "email"
 
+    SUBJECTS = {
+        "LOGIN": "Your TRACEBACK sign-in code",
+        "REGISTER": "Verify your TRACEBACK account",
+        "PASSWORD_RESET": "Reset your TRACEBACK password",
+        "SENSITIVE_ACTION": "Confirm your TRACEBACK account change",
+    }
+
+    def _content(self, purpose):
+        subject = self.SUBJECTS.get(purpose, "Your TRACEBACK verification code")
+        minutes = current_app.config.get("OTP_EXPIRES_SECONDS", 300) // 60
+        return subject, minutes
+
     def send(self, user, code, purpose):
         from flask_mail import Message
         from ..extensions import mail
-        subject = {
-            "LOGIN": "Your TRACEBACK sign-in code",
-            "REGISTER": "Verify your TRACEBACK account",
-            "PASSWORD_RESET": "Reset your TRACEBACK password",
-            "SENSITIVE_ACTION": "Confirm your TRACEBACK account change",
-        }.get(purpose, "Your TRACEBACK verification code")
-        minutes = current_app.config.get("OTP_EXPIRES_SECONDS", 300) // 60
-        body = (f"Your TRACEBACK verification code is {code}.\n"
-                f"It expires in {minutes} minutes.\n\n"
-                "If you did not request this, ignore this email and change your password.")
-        html = f"""<div style="font-family:Arial,sans-serif;max-width:480px">
+        subject, minutes = self._content(purpose)
+        body, html = _code_email_body(code, minutes)
+        msg = Message(subject=subject, recipients=[user.email], body=body, html=html)
+        mail.send(msg)
+
+
+def _code_email_body(code, minutes):
+    body = (f"Your TRACEBACK verification code is {code}.\n"
+            f"It expires in {minutes} minutes.\n\n"
+            "If you did not request this, ignore this email and change your password.")
+    html = f"""<div style="font-family:Arial,sans-serif;max-width:480px">
   <h2 style="color:#0B1F3A">TRACEBACK verification</h2>
   <p>Your code is:</p>
   <p style="font-size:32px;font-weight:800;letter-spacing:8px;color:#1D4ED8">{code}</p>
@@ -261,8 +273,49 @@ class EmailOtpSender(OtpSender):
   <p style="color:#64748B">If you did not request this, ignore this email and
   change your password.</p>
 </div>"""
-        msg = Message(subject=subject, recipients=[user.email], body=body, html=html)
-        mail.send(msg)
+    return body, html
+
+
+class EmailApiSender(OtpSender):
+    """Email OTP over an HTTPS mail API instead of SMTP.
+
+    Render (and most PaaS free tiers) block outbound SMTP ports (25/465/587);
+    a plain HTTPS POST to the provider's REST API works everywhere. Currently
+    supports Mailjet (MAIL_API_PROVIDER=mailjet) using the standard API-key /
+    secret-key pair stored in MAIL_USERNAME / MAIL_PASSWORD.
+    """
+
+    name = "emailapi"
+
+    def send(self, user, code, purpose):
+        import requests
+        provider = current_app.config.get("MAIL_API_PROVIDER", "")
+        if provider != "mailjet":
+            raise RuntimeError(
+                "MAIL_API_PROVIDER must be 'mailjet' for OTP_SENDER=emailapi")
+        subject, minutes = EmailOtpSender.SUBJECTS.get(
+            purpose, "Your TRACEBACK verification code"), \
+            current_app.config.get("OTP_EXPIRES_SECONDS", 300) // 60
+        body, html = _code_email_body(code, minutes)
+        sender = current_app.config.get("MAIL_DEFAULT_SENDER")
+        payload = {
+            "Messages": [{
+                "From": {"Email": sender, "Name": "TRACEBACK"},
+                "To": [{"Email": user.email}],
+                "Subject": subject,
+                "TextPart": body,
+                "HTMLPart": html,
+                "CustomID": f"otp-{purpose.lower()}",
+            }]
+        }
+        auth = (current_app.config.get("MAIL_USERNAME"),
+                current_app.config.get("MAIL_PASSWORD"))
+        resp = requests.post("https://api.mailjet.com/v3.1/send",
+                             json=payload, auth=auth, timeout=30)
+        if resp.status_code >= 400:
+            current_app.logger.error(
+                "Mailjet send failed: %s %s", resp.status_code, resp.text[:200])
+            raise RuntimeError(f"Mailjet send failed with status {resp.status_code}")
 
 
 class ConsoleOtpSender(OtpSender):
@@ -322,7 +375,8 @@ class SmsOtpSender(OtpSender):
         urllib.request.urlopen(req, timeout=10)
 
 
-_SENDERS = {"email": EmailOtpSender, "console": ConsoleOtpSender,
+_SENDERS = {"email": EmailOtpSender, "emailapi": EmailApiSender,
+            "console": ConsoleOtpSender,
             "testing": TestingOtpSender, "sms": SmsOtpSender}
 
 
