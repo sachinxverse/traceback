@@ -21,3 +21,4 @@ fastembed==0.9.1
 # Real embedding backend (EMBEDDING_BACKEND=real):
 #   pip install torch --index-url https://download.pytorch.org/whl/cpu
 #   pip install open_clip_torch sentence-transformers
+axe-playwright-python==0.1.5
