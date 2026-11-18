@@ -252,3 +252,65 @@ def test_otp_never_in_response_or_logs(client):
     """The plain code is not echoed in any API response body."""
     _step1(client)
     # (TestingOtpSender holds codes for tests; the API responses never carry them)
+
+
+def test_email_api_sender_posts_to_mailjet(app, monkeypatch):
+    """OTP_SENDER=emailapi sends the code via the Mailjet HTTPS API (no SMTP)."""
+    from app.services.otp import EmailApiSender
+    from app.models import User
+    from app.models.enums import Role
+
+    app.config["MAIL_API_PROVIDER"] = "mailjet"
+    app.config["MAIL_USERNAME"] = "apikey"
+    app.config["MAIL_PASSWORD"] = "apisecret"
+    app.config["MAIL_DEFAULT_SENDER"] = "noreply@traceback.test"
+
+    captured = {}
+
+    class FakeResp:
+        status_code = 200
+        text = '{"Messages":[{"Status":"success"}]}'
+
+    def fake_post(url, json=None, auth=None, timeout=None):
+        captured["url"] = url
+        captured["json"] = json
+        captured["auth"] = auth
+        captured["timeout"] = timeout
+        return FakeResp()
+
+    monkeypatch.setattr("requests.post", fake_post)
+
+    u = User(name="Api U", email="apiuser@test.com", role=Role.USER,
+             email_verified=True)
+    u.set_password("Password1")
+    from app.extensions import db as _db
+    _db.session.add(u)
+    _db.session.commit()
+
+    sender = EmailApiSender()
+    assert sender.name == "emailapi"
+    sender.send(u, "654321", "LOGIN")
+
+    assert captured["url"] == "https://api.mailjet.com/v3.1/send"
+    msg = captured["json"]["Messages"][0]
+    assert msg["To"] == [{"Email": "apiuser@test.com"}]
+    assert msg["From"]["Email"] == "noreply@traceback.test"
+    assert "654321" in msg["TextPart"] and "654321" in msg["HTMLPart"]
+    assert captured["auth"] == ("apikey", "apisecret")
+    assert captured["timeout"] == 30
+
+
+def test_email_api_sender_requires_mailjet_provider(app):
+    from app.services.otp import EmailApiSender
+    from app.models import User
+    from app.models.enums import Role
+    from app.extensions import db as _db
+
+    u = User(name="Api X", email="apix@test.com", role=Role.USER, email_verified=True)
+    u.set_password("Password1")
+    _db.session.add(u)
+    _db.session.commit()
+
+    sender = EmailApiSender()
+    with pytest.raises(RuntimeError, match="MAIL_API_PROVIDER"):
+        sender.send(u, "111111", "LOGIN")
